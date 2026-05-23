@@ -1,5 +1,6 @@
 # Systeme de Bases de Donnees Federees - Banque Commerciale du Togo
 
+[![GitHub](https://img.shields.io/badge/Repo-github.com/votre--organisation/projet--fin--dba-181717)](https://github.com/votre-organisation/projet-fin-dba)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-00a86b)](https://fastapi.tiangolo.com)
 [![React](https://img.shields.io/badge/React-18+-61dafb)](https://reactjs.org)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791)](https://www.postgresql.org)
@@ -110,8 +111,8 @@ Prometheus (Port 9090)  -->  postgres-exporter (9187)
 ## Installation rapide
 
 ```bash
-git clone <votre-repo> projet_fin_dba
-cd projet_fin_dba
+git clone https://github.com/votre-organisation/projet-fin-dba.git
+cd projet-fin-dba
 docker compose up -d --build
 ```
 
