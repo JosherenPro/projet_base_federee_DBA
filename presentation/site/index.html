@@ -1,0 +1,2036 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SBFD — Banque du Togo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: #0A0F1E;
+            color: #E2E8F0;
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0A0F1E; }
+        ::-webkit-scrollbar-thumb { background: #D4A843; border-radius: 3px; }
+        .scroll-progress {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            width: 0;
+            z-index: 140;
+            background: linear-gradient(90deg, #D4A843, #2DD4BF);
+            box-shadow: 0 0 24px rgba(212, 168, 67, 0.35);
+        }
+
+        .grain-overlay {
+            position: fixed; inset: 0; pointer-events: none; z-index: 9999;
+            opacity: 0.03;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+            background-repeat: repeat;
+            background-size: 256px 256px;
+        }
+
+        nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+            padding: 16px 48px;
+            display: flex; align-items: center; justify-content: space-between;
+            background: rgba(10, 15, 30, 0.85);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(212, 168, 67, 0.1);
+        }
+        .nav-links {
+            display: flex; align-items: center;
+        }
+        nav .logo {
+            font-family: 'Playfair Display', serif;
+            font-size: 20px; font-weight: 700;
+            color: #D4A843; letter-spacing: 2px;
+        }
+        nav .logo span { color: #E2E8F0; font-weight: 400; }
+        nav a {
+            color: #94A3B8; text-decoration: none; font-size: 14px;
+            margin-left: 32px; letter-spacing: 0.5px;
+            transition: color 0.3s; position: relative;
+        }
+        nav a:hover { color: #D4A843; }
+        nav a.active { color: #F1F5F9; }
+        nav a::after {
+            content: ''; position: absolute; bottom: -4px; left: 0; right: 0;
+            height: 1px; background: #D4A843; transform: scaleX(0);
+            transition: transform 0.3s;
+        }
+        nav a:hover::after { transform: scaleX(1); }
+        nav a.active::after { transform: scaleX(1); }
+        .nav-toggle {
+            display: none;
+            border: 1px solid rgba(212, 168, 67, 0.2);
+            background: rgba(255,255,255,0.03);
+            color: #E2E8F0;
+            border-radius: 10px;
+            padding: 10px 12px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .hero {
+            min-height: 100vh;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            position: relative;
+            padding: 120px 48px 60px;
+        }
+        .hero::before {
+            content: ''; position: absolute; inset: 0;
+            background:
+                radial-gradient(ellipse 80% 60% at 50% 40%, rgba(212, 168, 67, 0.06) 0%, transparent 70%),
+                radial-gradient(ellipse 60% 50% at 80% 80%, rgba(45, 212, 191, 0.04) 0%, transparent 60%);
+            pointer-events: none;
+        }
+        .hero-badge {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 8px 20px; border-radius: 100px;
+            border: 1px solid rgba(212, 168, 67, 0.3);
+            background: rgba(212, 168, 67, 0.08);
+            font-size: 12px; letter-spacing: 2px; text-transform: uppercase;
+            color: #D4A843; margin-bottom: 32px;
+        }
+        .hero-badge .dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: #22C55E; display: inline-block;
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+        @keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        .hero h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(42px, 6vw, 80px);
+            font-weight: 900; text-align: center;
+            line-height: 1.1; max-width: 900px;
+            color: #F1F5F9;
+        }
+        .hero h1 em {
+            font-style: italic; color: #D4A843;
+        }
+        .hero p {
+            font-size: 18px; color: #94A3B8;
+            text-align: center; max-width: 640px;
+            margin-top: 24px; line-height: 1.7;
+        }
+        .hero-actions {
+            display: flex; gap: 16px; margin-top: 40px;
+        }
+        .btn {
+            padding: 14px 32px; border-radius: 8px;
+            font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600;
+            text-decoration: none; cursor: pointer; transition: all 0.3s;
+            border: none; letter-spacing: 0.5px;
+        }
+        .btn-primary {
+            background: #D4A843; color: #0A0F1E;
+        }
+        .btn-primary:hover { background: #E0B95A; transform: translateY(-2px); box-shadow: 0 8px 30px rgba(212, 168, 67, 0.3); }
+        .btn-ghost {
+            background: transparent; color: #E2E8F0;
+            border: 1px solid rgba(255,255,255,0.15);
+        }
+        .btn-ghost:hover { border-color: #D4A843; color: #D4A843; }
+
+        .diagram-container {
+            width: 100%; max-width: 1100px;
+            margin: 60px auto 0;
+            position: relative;
+        }
+        .diagram-container svg {
+            width: 100%; height: auto;
+        }
+
+        .section {
+            padding: 100px 48px;
+            position: relative;
+        }
+        .section-label {
+            font-size: 12px; letter-spacing: 3px; text-transform: uppercase;
+            color: #D4A843; margin-bottom: 12px; font-weight: 600;
+        }
+        .section-title {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(32px, 4vw, 52px);
+            font-weight: 700; color: #F1F5F9;
+            margin-bottom: 24px; max-width: 700px;
+        }
+        .section-title em { color: #D4A843; font-style: italic; }
+        .section-desc {
+            font-size: 17px; color: #94A3B8;
+            max-width: 600px; margin-bottom: 48px; line-height: 1.7;
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px; max-width: 1200px; margin: 0 auto;
+        }
+        .card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 16px;
+            padding: 32px;
+            transition: all 0.4s;
+            position: relative; overflow: hidden;
+        }
+        .card:hover {
+            background: rgba(255,255,255,0.06);
+            border-color: rgba(212, 168, 67, 0.2);
+            transform: translateY(-4px);
+        }
+        .card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #D4A843, transparent);
+            transform: scaleX(0); transition: transform 0.5s;
+        }
+        .card:hover::before { transform: scaleX(1); }
+        .card-icon {
+            width: 48px; height: 48px; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px; margin-bottom: 20px;
+            background: rgba(212, 168, 67, 0.1);
+            color: #D4A843;
+        }
+        .card h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 20px; font-weight: 700; color: #F1F5F9;
+            margin-bottom: 12px;
+        }
+        .card p { font-size: 15px; color: #94A3B8; line-height: 1.7; }
+        .card .stat-row {
+            display: flex; gap: 24px; margin-top: 16px; padding-top: 16px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+        }
+        .card .stat { text-align: center; }
+        .card .stat .num { font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 700; color: #D4A843; }
+        .card .stat .lbl { font-size: 12px; color: #64748B; text-transform: uppercase; letter-spacing: 1px; }
+
+        .flow-section {
+            background: linear-gradient(180deg, #0A0F1E 0%, #0D1428 50%, #0A0F1E 100%);
+        }
+
+        .timeline {
+            max-width: 800px; margin: 0 auto;
+            position: relative;
+        }
+        .timeline::before {
+            content: ''; position: absolute; left: 24px; top: 0; bottom: 0;
+            width: 1px; background: linear-gradient(180deg, #D4A843, transparent);
+        }
+        .tl-item {
+            padding-left: 64px; position: relative;
+            margin-bottom: 48px;
+        }
+        .tl-item::before {
+            content: ''; position: absolute; left: 16px; top: 6px;
+            width: 16px; height: 16px; border-radius: 50%;
+            background: #0A0F1E; border: 2px solid #D4A843;
+        }
+        .tl-item h4 { font-size: 18px; color: #F1F5F9; margin-bottom: 8px; }
+        .tl-item p { font-size: 15px; color: #94A3B8; }
+        .tl-item .err-tag {
+            display: inline-block; padding: 2px 10px; border-radius: 4px;
+            font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
+            margin-right: 6px; margin-top: 8px;
+        }
+        .err-tag.critical { background: rgba(239,68,68,0.15); color: #EF4444; }
+        .err-tag.high { background: rgba(245,158,11,0.15); color: #F59E0B; }
+        .err-tag.resolved { background: rgba(34,197,94,0.15); color: #22C55E; }
+
+        .tech-stack {
+            display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px;
+        }
+        .tech-tag {
+            padding: 6px 16px; border-radius: 100px;
+            font-size: 13px; font-weight: 500;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.03);
+            color: #94A3B8; transition: all 0.3s;
+        }
+        .tech-tag:hover { border-color: #D4A843; color: #D4A843; background: rgba(212,168,67,0.08); }
+
+        .metrics-bar {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px; max-width: 900px; margin: 0 auto;
+        }
+        .metric {
+            text-align: center; padding: 24px;
+            background: rgba(255,255,255,0.03); border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .metric .val { font-family: 'JetBrains Mono', monospace; font-size: 32px; font-weight: 500; color: #D4A843; }
+        .metric .lbl { font-size: 13px; color: #64748B; margin-top: 4px; letter-spacing: 0.5px; }
+
+        .interactive-shell {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 28px;
+            align-items: start;
+        }
+        .interactive-panel {
+            background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 20px;
+            padding: 28px;
+            position: relative;
+            overflow: hidden;
+        }
+        .interactive-panel::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at top right, rgba(212, 168, 67, 0.12), transparent 34%),
+                radial-gradient(circle at bottom left, rgba(6, 182, 212, 0.10), transparent 30%);
+            pointer-events: none;
+        }
+        .panel-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 22px;
+            position: relative;
+            z-index: 1;
+        }
+        .panel-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 26px;
+            color: #F8FAFC;
+            margin-bottom: 6px;
+        }
+        .panel-subtitle {
+            color: #94A3B8;
+            font-size: 14px;
+            max-width: 520px;
+        }
+        .panel-chip {
+            flex-shrink: 0;
+            border-radius: 999px;
+            border: 1px solid rgba(212, 168, 67, 0.22);
+            background: rgba(212, 168, 67, 0.08);
+            color: #D4A843;
+            padding: 8px 14px;
+            font-size: 12px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .segmented-control {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 22px;
+            position: relative;
+            z-index: 1;
+        }
+        .segmented-control button,
+        .filter-chip {
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.03);
+            color: #94A3B8;
+            padding: 10px 14px;
+            border-radius: 999px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            font-size: 13px;
+        }
+        .segmented-control button:hover,
+        .filter-chip:hover,
+        .segmented-control button.active,
+        .filter-chip.active {
+            color: #0A0F1E;
+            background: #D4A843;
+            border-color: #D4A843;
+            box-shadow: 0 8px 24px rgba(212, 168, 67, 0.2);
+        }
+        .viz-card {
+            position: relative;
+            z-index: 1;
+            background: rgba(7, 10, 18, 0.55);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 18px;
+            padding: 20px;
+        }
+        .viz-title {
+            font-size: 17px;
+            color: #F1F5F9;
+            margin-bottom: 6px;
+        }
+        .viz-kicker {
+            font-size: 12px;
+            letter-spacing: 1px;
+            color: #64748B;
+            text-transform: uppercase;
+            margin-bottom: 18px;
+        }
+        .bar-stack {
+            display: grid;
+            gap: 12px;
+        }
+        .bar-row {
+            display: grid;
+            grid-template-columns: 120px 1fr 90px;
+            gap: 14px;
+            align-items: center;
+            padding: 8px 10px;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: background 0.25s ease, transform 0.25s ease, border-color 0.25s ease;
+            border: 1px solid transparent;
+        }
+        .bar-row:hover,
+        .bar-row.selected {
+            background: rgba(255,255,255,0.04);
+            border-color: rgba(212, 168, 67, 0.14);
+            transform: translateX(3px);
+        }
+        .bar-row-label {
+            color: #CBD5E1;
+            font-size: 14px;
+        }
+        .bar-row.selected .bar-row-label,
+        .bar-row.selected .bar-row-value {
+            color: #F8FAFC;
+        }
+        .bar-row-track {
+            height: 12px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.06);
+            overflow: hidden;
+            position: relative;
+        }
+        .bar-row.selected .bar-row-track {
+            box-shadow: inset 0 0 0 1px rgba(212, 168, 67, 0.2);
+        }
+        .bar-row-fill {
+            height: 100%;
+            width: 0;
+            border-radius: inherit;
+            background: linear-gradient(90deg, #D4A843, #F6C768);
+            transition: width 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .bar-row-fill.teal { background: linear-gradient(90deg, #0EA5A4, #2DD4BF); }
+        .bar-row-fill.red { background: linear-gradient(90deg, #DC2626, #F87171); }
+        .bar-row-fill.blue { background: linear-gradient(90deg, #2563EB, #60A5FA); }
+        .bar-row-value {
+            text-align: right;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            color: #D4A843;
+        }
+        .insight-strip {
+            margin-top: 18px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+        .insight-box {
+            padding: 14px;
+            border-radius: 14px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .insight-box strong {
+            display: block;
+            color: #F8FAFC;
+            margin-bottom: 6px;
+        }
+        .insight-box span {
+            color: #94A3B8;
+            font-size: 13px;
+        }
+        .agency-fact-panel {
+            margin-top: 18px;
+            padding: 18px;
+            border-radius: 18px;
+            border: 1px solid rgba(255,255,255,0.06);
+            background: linear-gradient(180deg, rgba(212, 168, 67, 0.08), rgba(255,255,255,0.02));
+            position: relative;
+            z-index: 1;
+        }
+        .agency-fact-panel h4 {
+            color: #F8FAFC;
+            font-size: 19px;
+            margin-bottom: 8px;
+        }
+        .agency-fact-panel p {
+            color: #94A3B8;
+            font-size: 14px;
+            line-height: 1.7;
+        }
+        .agency-fact-grid {
+            margin-top: 14px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+        .agency-fact {
+            padding: 14px;
+            border-radius: 14px;
+            background: rgba(7, 10, 18, 0.5);
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .agency-fact strong {
+            display: block;
+            color: #F8FAFC;
+            margin-bottom: 6px;
+        }
+        .agency-fact span {
+            color: #94A3B8;
+            font-size: 13px;
+        }
+        .scenario-list {
+            display: grid;
+            gap: 14px;
+            position: relative;
+            z-index: 1;
+        }
+        .scenario-item {
+            border: 1px solid rgba(255,255,255,0.07);
+            background: rgba(255,255,255,0.03);
+            border-radius: 16px;
+            padding: 18px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+        .scenario-item:hover,
+        .scenario-item.active {
+            border-color: rgba(212, 168, 67, 0.25);
+            background: rgba(212, 168, 67, 0.08);
+            transform: translateY(-2px);
+        }
+        .scenario-item strong {
+            display: block;
+            color: #F8FAFC;
+            margin-bottom: 8px;
+        }
+        .scenario-item p {
+            color: #94A3B8;
+            font-size: 14px;
+        }
+        .scenario-stage {
+            margin-top: 10px;
+            display: inline-flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .scenario-stage span {
+            font-size: 11px;
+            padding: 5px 9px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.06);
+            color: #CBD5E1;
+            letter-spacing: 0.4px;
+        }
+        .scenario-output {
+            margin-top: 18px;
+            padding: 18px;
+            border-radius: 16px;
+            background: rgba(7, 10, 18, 0.55);
+            border: 1px solid rgba(255,255,255,0.06);
+            position: relative;
+            z-index: 1;
+        }
+        .scenario-output h4 {
+            color: #F8FAFC;
+            margin-bottom: 10px;
+            font-size: 17px;
+        }
+        .scenario-output p {
+            color: #94A3B8;
+            font-size: 14px;
+            line-height: 1.7;
+        }
+        .scenario-output ul {
+            margin-top: 14px;
+            padding-left: 18px;
+            color: #CBD5E1;
+            display: grid;
+            gap: 8px;
+        }
+        .pulse-led {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #22C55E;
+            box-shadow: 0 0 0 rgba(34, 197, 94, 0.5);
+            animation: led-pulse 1.8s infinite;
+        }
+        @keyframes led-pulse {
+            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+        .architecture-hotspots {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 18px 0 22px;
+            position: relative;
+            z-index: 1;
+        }
+        .hotspot-btn {
+            padding: 10px 14px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.03);
+            color: #CBD5E1;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            font-size: 13px;
+        }
+        .hotspot-btn.active,
+        .hotspot-btn:hover {
+            background: rgba(212, 168, 67, 0.12);
+            border-color: rgba(212, 168, 67, 0.28);
+            color: #F8FAFC;
+        }
+        .hotspot-card {
+            position: relative;
+            z-index: 1;
+            padding: 22px;
+            border-radius: 18px;
+            background: rgba(7, 10, 18, 0.55);
+            border: 1px solid rgba(255,255,255,0.06);
+            min-height: 220px;
+        }
+        .hotspot-card h4 {
+            font-size: 21px;
+            color: #F8FAFC;
+            margin-bottom: 10px;
+        }
+        .hotspot-card p {
+            color: #94A3B8;
+            font-size: 14px;
+            line-height: 1.7;
+        }
+        .hotspot-meta {
+            margin-top: 18px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .hotspot-meta span {
+            padding: 8px 10px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.06);
+            color: #CBD5E1;
+            font-size: 12px;
+        }
+        .error-filter-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 24px;
+            justify-content: center;
+        }
+        .tl-item.hidden {
+            display: none;
+        }
+        .sticky-float {
+            position: fixed;
+            right: 22px;
+            bottom: 22px;
+            z-index: 90;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            border-radius: 999px;
+            background: rgba(10, 15, 30, 0.9);
+            border: 1px solid rgba(212, 168, 67, 0.16);
+            backdrop-filter: blur(20px);
+            color: #CBD5E1;
+            font-size: 13px;
+            box-shadow: 0 16px 32px rgba(0,0,0,0.25);
+        }
+        .sticky-float strong {
+            color: #D4A843;
+        }
+        .journey-grid {
+            margin-top: 32px;
+            display: grid;
+            grid-template-columns: 340px 1fr;
+            gap: 24px;
+        }
+        .journey-steps {
+            display: grid;
+            gap: 12px;
+        }
+        .journey-step {
+            width: 100%;
+            text-align: left;
+            border-radius: 18px;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.03);
+            color: #CBD5E1;
+            padding: 18px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+        .journey-step:hover,
+        .journey-step.active {
+            background: rgba(212, 168, 67, 0.10);
+            border-color: rgba(212, 168, 67, 0.24);
+            transform: translateY(-2px);
+        }
+        .journey-step small {
+            display: block;
+            color: #64748B;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+        .journey-step strong {
+            display: block;
+            color: #F8FAFC;
+            font-size: 16px;
+            margin-bottom: 6px;
+        }
+        .journey-step span {
+            color: #94A3B8;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        .journey-output {
+            border-radius: 22px;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+            padding: 26px;
+            overflow: hidden;
+            position: relative;
+        }
+        .journey-output::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at top left, rgba(45, 212, 191, 0.10), transparent 28%),
+                radial-gradient(circle at bottom right, rgba(212, 168, 67, 0.12), transparent 30%);
+            pointer-events: none;
+        }
+        .journey-output-inner {
+            position: relative;
+            z-index: 1;
+        }
+        .journey-output h3 {
+            font-family: 'Playfair Display', serif;
+            color: #F8FAFC;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        .journey-output p {
+            color: #94A3B8;
+            font-size: 15px;
+            line-height: 1.8;
+        }
+        .journey-flow {
+            margin: 20px 0;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+        }
+        .journey-node {
+            padding: 10px 14px;
+            border-radius: 999px;
+            background: rgba(7, 10, 18, 0.55);
+            border: 1px solid rgba(255,255,255,0.06);
+            color: #F8FAFC;
+            font-size: 13px;
+        }
+        .journey-arrow {
+            color: #D4A843;
+            font-size: 16px;
+        }
+        .journey-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .journey-badges span {
+            padding: 7px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            color: #CBD5E1;
+            border: 1px solid rgba(255,255,255,0.06);
+            background: rgba(255,255,255,0.04);
+        }
+        .journey-points {
+            display: grid;
+            gap: 12px;
+        }
+        .journey-points div {
+            padding: 14px 16px;
+            border-radius: 16px;
+            background: rgba(7, 10, 18, 0.45);
+            border: 1px solid rgba(255,255,255,0.06);
+            color: #CBD5E1;
+            font-size: 14px;
+        }
+        .journey-points strong {
+            color: #F8FAFC;
+        }
+
+        footer {
+            text-align: center; padding: 48px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            color: #64748B; font-size: 14px;
+        }
+        footer strong { color: #D4A843; }
+
+        .fade-in { opacity: 0; transform: translateY(30px); transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1); }
+        .fade-in.visible { opacity: 1; transform: translateY(0); }
+
+        @media (max-width: 768px) {
+            nav { padding: 16px 24px; }
+            .nav-toggle { display: inline-flex; }
+            .nav-links {
+                position: absolute;
+                top: calc(100% + 10px);
+                left: 16px;
+                right: 16px;
+                padding: 16px;
+                border-radius: 18px;
+                background: rgba(10, 15, 30, 0.98);
+                border: 1px solid rgba(212, 168, 67, 0.1);
+                display: none;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            .nav-links.open { display: flex; }
+            nav a { margin-left: 0; font-size: 13px; }
+            .hero { padding: 100px 24px 40px; }
+            .section { padding: 60px 24px; }
+            .cards-grid { grid-template-columns: 1fr; }
+            .metrics-bar { grid-template-columns: repeat(2, 1fr); }
+            .hero-actions { flex-direction: column; }
+            .interactive-shell { grid-template-columns: 1fr; }
+            .bar-row { grid-template-columns: 1fr; gap: 8px; }
+            .insight-strip { grid-template-columns: 1fr; }
+            .agency-fact-grid { grid-template-columns: 1fr; }
+            .journey-grid { grid-template-columns: 1fr; }
+            .sticky-float { left: 16px; right: 16px; bottom: 16px; justify-content: center; }
+        }
+
+        .comparison-table {
+            width: 100%; border-collapse: separate; border-spacing: 0;
+            margin-top: 24px; border-radius: 12px; overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .comparison-table th {
+            background: rgba(212,168,67,0.1);
+            color: #D4A843; font-size: 13px; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 1px;
+            padding: 14px 20px; text-align: left;
+        }
+        .comparison-table td {
+            padding: 14px 20px; font-size: 14px;
+            border-top: 1px solid rgba(255,255,255,0.04);
+            color: #94A3B8;
+        }
+        .comparison-table tr:hover td { background: rgba(255,255,255,0.02); }
+        .comparison-table td:first-child { font-weight: 600; color: #E2E8F0; }
+
+        .section-alt {
+            background: rgba(255,255,255,0.01);
+            border-top: 1px solid rgba(255,255,255,0.04);
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+
+        /* --- NEW GRAPHICAL ELEMENTS CSS --- */
+        .pipeline-graph {
+            display: flex; align-items: center; justify-content: center;
+            gap: 20px; padding: 40px 0; max-width: 1000px; margin: 0 auto;
+            flex-wrap: wrap; text-align: center;
+        }
+        .pipe-node {
+            background: rgba(255,255,255,0.03); border: 1px solid rgba(212,168,67,0.2);
+            padding: 16px 24px; border-radius: 12px; position: relative;
+            color: #F1F5F9; font-size: 14px; font-weight: 600; width: 180px;
+        }
+        .pipe-node .icon { display: block; font-size: 24px; margin-bottom: 8px; color: #D4A843; }
+        .pipe-node .desc { display: block; font-size: 12px; color: #94A3B8; font-weight: 400; margin-top: 4px; }
+        .pipe-arrow {
+            width: 60px; height: 4px; border-radius: 4px;
+            background: rgba(212,168,67,0.15);
+            position: relative; overflow: hidden;
+            margin: 0 4px; z-index: 1;
+        }
+        .pipe-arrow::after {
+            content: ''; position: absolute; top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, #D4A843, transparent);
+            animation: flow-slide 1.5s infinite linear;
+        }
+        @keyframes flow-slide {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(200%); }
+        }
+        .pipe-stack { display: flex; flex-direction: column; gap: 12px; }
+
+        .fdw-flux-container {
+            background: #0D1428; border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 20px; padding: 40px; margin: 40px auto; max-width: 800px;
+            box-shadow: inset 0 0 40px rgba(0,0,0,0.5);
+            position: relative; overflow: hidden;
+        }
+        .fdw-flux-container::before {
+            content: ''; position: absolute; inset: 0;
+            background: radial-gradient(circle at center, rgba(34,197,94,0.05), transparent 60%);
+            pointer-events: none;
+        }
+
+        .mock-dashboard {
+            background: #0A0F1E; border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px; display: grid; grid-template-columns: 240px 1fr;
+            overflow: hidden; max-width: 1100px; margin: 40px auto 0; box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+        }
+        .mock-sidebar {
+            background: rgba(255,255,255,0.02); border-right: 1px solid rgba(255,255,255,0.05); padding: 24px;
+        }
+        .mock-menu-item {
+            height: 12px; background: rgba(255,255,255,0.1); border-radius: 6px; margin-bottom: 16px;
+            width: 70%; display: flex; align-items: center; gap: 12px;
+        }
+        .mock-menu-item::before {
+            content:''; width: 16px; height: 16px; background: rgba(212,168,67,0.4); border-radius: 4px; display: inline-block;
+        }
+        .mock-main { padding: 32px; display: grid; gap: 20px; }
+        .mock-kpi-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+        .mock-kpi {
+            background: rgba(255,255,255,0.04); border-radius: 12px; padding: 16px;
+        }
+        .mock-chart-box {
+            background: rgba(255,255,255,0.04); border-radius: 12px; padding: 24px; height: 180px;
+            display: flex; align-items: flex-end; gap: 12px; justify-content: center;
+        }
+        .mock-bar {
+            width: 30px; background: #D4A843; border-radius: 4px 4px 0 0;
+            animation: grow-up 2s ease-out forwards;
+        }
+        @keyframes grow-up { from { height: 0; } }
+
+        .grafana-grid {
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;
+            max-width: 1000px; margin: 40px auto 0;
+        }
+        .grafana-panel {
+            background: #111217; border: 1px solid #22252B; border-radius: 8px; padding: 16px;
+            position: relative;
+        }
+        .gf-title { color: #8E9297; font-size: 12px; font-weight: 500; font-family: monospace; display: block; margin-bottom: 12px; }
+        .gf-value { color: #5794F2; font-size: 28px; font-weight: 700; font-family: sans-serif; display: block; text-align: center; margin: 16px 0; }
+        .gf-chart { height: 80px; width: 100%; display: flex; align-items: flex-end; gap: 4px; justify-content: center;}
+        .gf-line {
+            width: 100%; height: 100%;
+            background: url("data:image/svg+xml,%3Csvg preserveAspectRatio='none' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath stroke='%2373BF69' stroke-width='2' fill='none' d='M0,80 Q10,20 20,70 T40,60 T60,80 T80,40 T100,50'/%3E%3Cpath fill='rgba(115,191,105,0.1)' d='M0,80 Q10,20 20,70 T40,60 T60,80 T80,40 T100,50 L100,100 L0,100 Z'/%3E%3C/svg%3E");
+            background-size: 100% 100%;
+        }
+        .gf-line.red { stroke: #F2495C; background: url("data:image/svg+xml,%3Csvg preserveAspectRatio='none' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath stroke='%23F2495C' stroke-width='2' fill='none' d='M0,50 Q20,60 30,30 T50,80 T70,40 T90,70 T100,20'/%3E%3Cpath fill='rgba(242,73,92,0.1)' d='M0,50 Q20,60 30,30 T50,80 T70,40 T90,70 T100,20 L100,100 L0,100 Z'/%3E%3C/svg%3E"); background-size: 100% 100%; }
+
+        @media (max-width: 768px) {
+            .grafana-grid, .mock-dashboard { grid-template-columns: 1fr; }
+            .mock-sidebar { display: none; }
+        }
+    </style>
+</head>
+<body>
+<div class="grain-overlay"></div>
+<div class="scroll-progress" id="scroll-progress" aria-hidden="true"></div>
+
+<nav>
+    <div class="logo">SBFD<span>.</span></div>
+    <button class="nav-toggle" aria-label="Ouvrir la navigation">☰</button>
+    <div class="nav-links">
+        <a href="#architecture">Architecture</a>
+        <a href="#explorer">Explorer</a>
+        <a href="#federation">Fédération</a>
+        <a href="#backend">Backend</a>
+        <a href="#frontend">Frontend</a>
+        <a href="#monitoring">Monitoring</a>
+        <a href="#erreurs">Erreurs</a>
+    </div>
+</nav>
+
+<section class="hero">
+    <div class="hero-badge">
+        <span class="dot"></span>
+        Système de 10 conteneurs interconnectés
+    </div>
+    <h1>Bases de Données <em>Fédérées</em><br>Banque du Togo</h1>
+    <p>Unification de 3 SGBD hétérogènes — PostgreSQL, MySQL et SQL Server — via Foreign Data Wrappers, avec API FastAPI, interface React et monitoring Prometheus + Grafana.</p>
+    <div class="hero-actions">
+        <a href="#architecture" class="btn btn-primary">Explorer l'architecture</a>
+        <a href="#erreurs" class="btn btn-ghost">15 erreurs résolues</a>
+    </div>
+
+    <div class="diagram-container">
+        <svg viewBox="0 0 1000 340" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <linearGradient id="glow-gold" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stop-color="#D4A843" stop-opacity="0"/>
+                    <stop offset="50%" stop-color="#D4A843" stop-opacity="0.6"/>
+                    <stop offset="100%" stop-color="#D4A843" stop-opacity="0"/>
+                </linearGradient>
+                <filter id="glow">
+                    <feGaussianBlur stdDeviation="3" result="blur"/>
+                    <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                </filter>
+                <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#D4A843"/>
+                </marker>
+            </defs>
+
+            <!-- Background connections -->
+            <path d="M 180 170 L 420 170" stroke="rgba(212,168,67,0.15)" stroke-width="2" stroke-dasharray="6 4"/>
+            <path d="M 580 170 L 740 130" stroke="rgba(212,168,67,0.15)" stroke-width="2" stroke-dasharray="6 4"/>
+            <path d="M 580 170 L 740 210" stroke="rgba(45,212,191,0.15)" stroke-width="2" stroke-dasharray="6 4"/>
+
+            <!-- Animated particles -->
+            <circle r="3" fill="#D4A843" filter="url(#glow)">
+                <animateMotion dur="3s" repeatCount="indefinite" path="M 180 170 L 420 170"/>
+            </circle>
+            <circle r="3" fill="#D4A843" filter="url(#glow)">
+                <animateMotion dur="2.5s" repeatCount="indefinite" begin="0.5s" path="M 420 170 L 180 170"/>
+            </circle>
+            <circle r="3" fill="#D4A843" filter="url(#glow)">
+                <animateMotion dur="3.5s" repeatCount="indefinite" begin="1s" path="M 580 170 L 740 130"/>
+            </circle>
+            <circle r="3" fill="#2DD4BF" filter="url(#glow)">
+                <animateMotion dur="3.5s" repeatCount="indefinite" begin="0.8s" path="M 580 170 L 740 210"/>
+            </circle>
+            <circle r="3" fill="#D4A843" filter="url(#glow)">
+                <animateMotion dur="4s" repeatCount="indefinite" begin="2s" path="M 740 130 L 580 170"/>
+            </circle>
+            <circle r="3" fill="#2DD4BF" filter="url(#glow)">
+                <animateMotion dur="4s" repeatCount="indefinite" begin="1.5s" path="M 740 210 L 580 170"/>
+            </circle>
+
+            <!-- Monitoring connection -->
+            <path d="M 580 170 Q 680 280 860 260" stroke="rgba(168,85,247,0.15)" stroke-width="2" stroke-dasharray="4 6"/>
+            <circle r="2.5" fill="#A855F7" filter="url(#glow)">
+                <animateMotion dur="5s" repeatCount="indefinite" path="M 580 170 Q 680 280 860 260"/>
+            </circle>
+
+            <!-- Box: React Frontend -->
+            <rect x="40" y="130" width="140" height="80" rx="12" fill="rgba(6,182,212,0.08)" stroke="rgba(6,182,212,0.3)" stroke-width="1.5"/>
+            <text x="110" y="162" text-anchor="middle" fill="#06B6D4" font-family="'DM Sans', sans-serif" font-size="13" font-weight="600">REACT</text>
+            <text x="110" y="182" text-anchor="middle" fill="#64748B" font-family="'DM Sans', sans-serif" font-size="10">Frontend</text>
+            <text x="110" y="196" text-anchor="middle" fill="#64748B" font-family="'DM Sans', sans-serif" font-size="9">Port 3000</text>
+
+            <!-- Box: FastAPI Backend -->
+            <rect x="280" y="130" width="140" height="80" rx="12" fill="rgba(212,168,67,0.08)" stroke="rgba(212,168,67,0.3)" stroke-width="1.5"/>
+            <text x="350" y="162" text-anchor="middle" fill="#D4A843" font-family="'DM Sans', sans-serif" font-size="13" font-weight="600">FASTAPI</text>
+            <text x="350" y="182" text-anchor="middle" fill="#64748B" font-family="'DM Sans', sans-serif" font-size="10">Backend</text>
+            <text x="350" y="196" text-anchor="middle" fill="#64748B" font-family="'DM Sans', sans-serif" font-size="9">Port 8000</text>
+
+            <!-- Box: PostgreSQL Hub -->
+            <rect x="510" y="130" width="140" height="80" rx="12" fill="rgba(34,197,94,0.08)" stroke="rgba(34,197,94,0.3)" stroke-width="1.5"/>
+            <text x="580" y="155" text-anchor="middle" fill="#22C55E" font-family="'DM Sans', sans-serif" font-size="13" font-weight="600">POSTGRES</text>
+            <text x="580" y="172" text-anchor="middle" fill="#64748B" font-family="'DM Sans', sans-serif" font-size="10">Hub Central</text>
+            <text x="580" y="196" text-anchor="middle" fill="#64748B" font-family="'DM Sans', sans-serif" font-size="9">+ FDW</text>
+
+            <!-- Box: MySQL -->
+            <rect x="680" y="90" width="120" height="70" rx="12" fill="rgba(245,158,11,0.08)" stroke="rgba(245,158,11,0.3)" stroke-width="1.5"/>
+            <text x="740" y="122" text-anchor="middle" fill="#F59E0B" font-family="'DM Sans', sans-serif" font-size="13" font-weight="600">MySQL</text>
+            <text x="740" y="140" text-anchor="middle" fill="#64748B" font-family="'DM Sans', sans-serif" font-size="10">Crédits</text>
+            <text x="740" y="154" text-anchor="middle" fill="#64748B" font-family="'DM Sans', sans-serif" font-size="9">4 tables</text>
+
+            <!-- Box: SQL Server -->
+            <rect x="680" y="170" width="120" height="70" rx="12" fill="rgba(239,68,68,0.08)" stroke="rgba(239,68,68,0.3)" stroke-width="1.5"/>
+            <text x="740" y="202" text-anchor="middle" fill="#EF4444" font-family="'DM Sans', sans-serif" font-size="13" font-weight="600">MSSQL</text>
+            <text x="740" y="220" text-anchor="middle" fill="#64748B" font-family="'DM Sans', sans-serif" font-size="10">Compta/RH</text>
+            <text x="740" y="234" text-anchor="middle" fill="#64748B" font-family="'DM Sans', sans-serif" font-size="9">4 tables</text>
+
+            <!-- Box: Prometheus + Grafana -->
+            <rect x="790" y="230" width="140" height="60" rx="12" fill="rgba(168,85,247,0.08)" stroke="rgba(168,85,247,0.3)" stroke-width="1.5"/>
+            <text x="860" y="258" text-anchor="middle" fill="#A855F7" font-family="'DM Sans', sans-serif" font-size="12" font-weight="600">PROMETHEUS</text>
+            <text x="860" y="276" text-anchor="middle" fill="#64748B" font-family="'DM Sans', sans-serif" font-size="10">+ Grafana</text>
+
+            <!-- Labels -->
+            <text x="300" y="120" text-anchor="middle" fill="#64748B" font-family="'DM Sans', sans-serif" font-size="10" letter-spacing="2">HTTP / REST</text>
+            <text x="650" y="120" text-anchor="middle" fill="#64748B" font-family="'DM Sans', sans-serif" font-size="10" letter-spacing="2">FDW</text>
+
+            <!-- Legend -->
+            <circle cx="880" cy="28" r="3" fill="#D4A843"/>
+            <text x="888" y="32" fill="#64748B" font-family="'DM Sans', sans-serif" font-size="10">Requêtes</text>
+            <circle cx="940" cy="28" r="3" fill="#2DD4BF"/>
+            <text x="948" y="32" fill="#64748B" font-family="'DM Sans', sans-serif" font-size="10">Écritures</text>
+        </svg>
+    </div>
+</section>
+
+<section id="architecture" class="section">
+    <div class="fade-in" style="max-width:1200px;margin:0 auto">
+        <div class="section-label">Architecture</div>
+        <h2 class="section-title">10 conteneurs, <em>3 bases</em>, 1 hub</h2>
+        <p class="section-desc">Le système fédère trois bases de données hétérogènes via PostgreSQL Hub, avec un backend FastAPI asynchrone et une interface React moderne.</p>
+        <div class="cards-grid">
+            <div class="card">
+                <div class="card-icon">🐘</div>
+                <h3>PostgreSQL Hub</h3>
+                <p>Hub central contenant les données locales (clients, comptes, transactions) et les foreign tables pointant vers MySQL et SQL Server via FDW.</p>
+                <div class="tech-stack">
+                    <span class="tech-tag">PostgreSQL 16</span>
+                    <span class="tech-tag">mysql_fdw</span>
+                    <span class="tech-tag">tds_fdw</span>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-icon">🐬</div>
+                <h3>MySQL Credits</h3>
+                <p>Base de données des crédits et du risque : dossiers de prêt, garanties, échéanciers de remboursement et scores de risque.</p>
+                <div class="stat-row">
+                    <div class="stat"><div class="num">15</div><div class="lbl">Dossiers</div></div>
+                    <div class="stat"><div class="num">20</div><div class="lbl">Garanties</div></div>
+                    <div class="stat"><div class="num">50</div><div class="lbl">Échéances</div></div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-icon">🗄️</div>
+                <h3>SQL Server Compta</h3>
+                <p>Base de données comptable et RH : plan comptable OHADA, écritures comptables, bulletins de paie et opérations par agence.</p>
+                <div class="stat-row">
+                    <div class="stat"><div class="num">60</div><div class="lbl">Comptes</div></div>
+                    <div class="stat"><div class="num">120</div><div class="lbl">Écritures</div></div>
+                    <div class="stat"><div class="num">20</div><div class="lbl">Bulletins</div></div>
+                </div>
+            </div>
+        </div>
+        <div class="journey-grid">
+            <div class="journey-steps" id="journey-steps">
+                <button class="journey-step active" data-journey="capture">
+                    <small>Étape 1</small>
+                    <strong>Capture front</strong>
+                    <span>Le jury clique dans React et déclenche un cas métier concret.</span>
+                </button>
+                <button class="journey-step" data-journey="api">
+                    <small>Étape 2</small>
+                    <strong>Orchestration API</strong>
+                    <span>FastAPI agrège, valide et expose les ressources au format métier.</span>
+                </button>
+                <button class="journey-step" data-journey="hub">
+                    <small>Étape 3</small>
+                    <strong>Hub fédéré</strong>
+                    <span>PostgreSQL centralise les vues locales, distantes et matérialisées.</span>
+                </button>
+                <button class="journey-step" data-journey="sources">
+                    <small>Étape 4</small>
+                    <strong>Sources hétérogènes</strong>
+                    <span>MySQL et SQL Server restent spécialisés tout en étant consultables comme des tables locales.</span>
+                </button>
+            </div>
+            <div class="journey-output" id="journey-output"></div>
+        </div>
+    </div>
+</section>
+
+<section id="explorer" class="section flow-section">
+    <div class="fade-in">
+        <div class="section-label" style="text-align:center">Expérience interactive</div>
+        <h2 class="section-title" style="max-width:860px;margin:0 auto 16px;text-align:center">Naviguer dans le projet <em>comme un jury</em></h2>
+        <p class="section-desc" style="max-width:820px;margin:0 auto 42px;text-align:center">Cette zone condense les données clés observées dans l'application : volumes par agence, trajectoires métier et points d'attention sur l'intégration. Cliquez, filtrez, comparez.</p>
+
+        <div class="interactive-shell">
+            <div class="interactive-panel">
+                <div class="panel-head">
+                    <div>
+                        <div class="panel-title">Cockpit des agences</div>
+                        <div class="panel-subtitle">Basculer entre plusieurs lectures métier du système : comptes actifs, volume des crédits approuvés ou pression risque par agence.</div>
+                    </div>
+                    <div class="panel-chip">Live Storyboard</div>
+                </div>
+
+                <div class="segmented-control" id="agency-mode">
+                    <button class="active" data-mode="accounts">Comptes actifs</button>
+                    <button data-mode="credits">Crédits approuvés</button>
+                    <button data-mode="balances">Soldes totaux</button>
+                </div>
+
+                <div class="viz-card">
+                    <div class="viz-title" id="agency-chart-title">Répartition des comptes actifs</div>
+                    <div class="viz-kicker" id="agency-chart-kicker">Vue issue du dashboard fédéré</div>
+                    <div class="bar-stack" id="agency-chart"></div>
+                    <div class="insight-strip">
+                        <div class="insight-box">
+                            <strong>Lomé</strong>
+                            <span>8 comptes actifs et 21 M XOF de crédits approuvés.</span>
+                        </div>
+                        <div class="insight-box">
+                            <strong>Sokodé</strong>
+                            <span>Volume de soldes le plus élevé sur le jeu de démonstration.</span>
+                        </div>
+                        <div class="insight-box">
+                            <strong>Dapaong</strong>
+                            <span>Base plus réduite, utile pour illustrer le risque élevé.</span>
+                        </div>
+                    </div>
+                    <div class="agency-fact-panel" id="agency-fact-panel"></div>
+                </div>
+            </div>
+
+            <div class="interactive-panel">
+                <div class="panel-head">
+                    <div>
+                        <div class="panel-title">Démo guidée</div>
+                        <div class="panel-subtitle">Trois récits d'usage à activer pendant la soutenance pour donner vie au système au-delà des schémas techniques.</div>
+                    </div>
+                    <div class="pulse-led" aria-hidden="true"></div>
+                </div>
+
+                <div class="scenario-list" id="scenario-list">
+                    <div class="scenario-item active" data-scenario="credit">
+                        <strong>Responsable crédit</strong>
+                        <p>Recherche client, lecture du scoring, décision sur le dossier et suivi d'échéancier.</p>
+                        <div class="scenario-stage">
+                            <span>Client</span><span>Scoring</span><span>Décision</span><span>Échéancier</span>
+                        </div>
+                    </div>
+                    <div class="scenario-item" data-scenario="director">
+                        <strong>Directeur d'agence</strong>
+                        <p>Pilotage des volumes, comparaison des agences et surveillance des clients à risque élevé.</p>
+                        <div class="scenario-stage">
+                            <span>Dashboard</span><span>KPIs</span><span>Risque</span>
+                        </div>
+                    </div>
+                    <div class="scenario-item" data-scenario="dba">
+                        <strong>DBA / Support</strong>
+                        <p>Contrôle de la fédération, vérification des vues et lecture technique des bases.</p>
+                        <div class="scenario-stage">
+                            <span>FDW</span><span>Views</span><span>Health</span><span>Query</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="scenario-output" id="scenario-output"></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="federation" class="section section-alt">
+    <div class="fade-in" style="max-width:1200px;margin:0 auto">
+        <div class="section-label">Données fédérées</div>
+        <h2 class="section-title">Vues unifiées <em>transverses</em></h2>
+        <p class="section-desc">Les foreign tables sont exposées via des vues fédérées qui combinent les données des 3 SGBD comme si elles étaient locales.</p>
+        <div class="architecture-hotspots" id="hotspot-controls">
+            <button class="hotspot-btn active" data-hotspot="client">Vue client</button>
+            <button class="hotspot-btn" data-hotspot="credit">Vue crédit</button>
+            <button class="hotspot-btn" data-hotspot="ops">Vue comptable</button>
+            <button class="hotspot-btn" data-hotspot="dashboard">Vue tableau de bord</button>
+        </div>
+        <div class="hotspot-card" id="hotspot-card"></div>
+
+        <div class="fdw-flux-container">
+            <h3 style="color:#F1F5F9; font-family:'Playfair Display', serif; font-size:24px; text-align:center; margin-bottom:30px;">Flux d'Accès aux Données via FDW</h3>
+            <svg viewBox="0 0 600 240" style="width: 100%; height: auto; max-height: 240px;">
+                <defs>
+                    <linearGradient id="flow-grad1" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stop-color="#F59E0B" stop-opacity="0.2"/>
+                        <stop offset="100%" stop-color="#22C55E" stop-opacity="0.8"/>
+                    </linearGradient>
+                    <linearGradient id="flow-grad2" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stop-color="#EF4444" stop-opacity="0.2"/>
+                        <stop offset="100%" stop-color="#22C55E" stop-opacity="0.8"/>
+                    </linearGradient>
+                    <filter id="glow-flow">
+                        <feGaussianBlur stdDeviation="2" result="blur"/>
+                        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                    </filter>
+                </defs>
+
+                <!-- Lignes de flux animées -->
+                <path d="M 170 60 Q 250 60 380 100" fill="none" stroke="url(#flow-grad1)" stroke-width="4" stroke-dasharray="8 6">
+                   <animate attributeName="stroke-dashoffset" from="14" to="0" dur="0.8s" repeatCount="indefinite" />
+                </path>
+                <path d="M 170 180 Q 250 180 380 140" fill="none" stroke="url(#flow-grad2)" stroke-width="4" stroke-dasharray="8 6">
+                   <animate attributeName="stroke-dashoffset" from="14" to="0" dur="0.8s" repeatCount="indefinite" />
+                </path>
+                
+                <!-- Node MySQL -->
+                <rect x="20" y="30" width="150" height="60" rx="12" fill="rgba(245,158,11,0.08)" stroke="#F59E0B" stroke-width="1.5"/>
+                <text x="95" y="58" fill="#F59E0B" font-family="'DM Sans', sans-serif" font-weight="700" font-size="15" text-anchor="middle">MySQL</text>
+                <text x="95" y="76" fill="#94A3B8" font-family="'DM Sans', sans-serif" font-size="11" text-anchor="middle">Crédits (Port 3308)</text>
+                
+                <!-- Node SQL Server -->
+                <rect x="20" y="150" width="150" height="60" rx="12" fill="rgba(239,68,68,0.08)" stroke="#EF4444" stroke-width="1.5"/>
+                <text x="95" y="178" fill="#EF4444" font-family="'DM Sans', sans-serif" font-weight="700" font-size="15" text-anchor="middle">SQL Server</text>
+                <text x="95" y="196" fill="#94A3B8" font-family="'DM Sans', sans-serif" font-size="11" text-anchor="middle">Compta (Port 1435)</text>
+                
+                <!-- Node PostgreSQL Hub -->
+                <rect x="380" y="80" width="200" height="80" rx="12" fill="rgba(34,197,94,0.08)" stroke="#22C55E" stroke-width="1.5"/>
+                <text x="480" y="115" fill="#22C55E" font-family="'DM Sans', sans-serif" font-weight="700" font-size="16" text-anchor="middle">PostgreSQL Hub</text>
+                <text x="480" y="135" fill="#F1F5F9" font-family="'DM Sans', sans-serif" font-size="12" text-anchor="middle">Moteur Fédérateur</text>
+
+                <!-- Particules de données -->
+                <circle r="4" fill="#FCD34D" filter="url(#glow-flow)">
+                    <animateMotion dur="2s" repeatCount="indefinite" path="M 170 60 Q 250 60 380 100"/>
+                </circle>
+                <circle r="4" fill="#FCA5A5" filter="url(#glow-flow)">
+                    <animateMotion dur="2.5s" repeatCount="indefinite" path="M 170 180 Q 250 180 380 140"/>
+                </circle>
+                <circle r="4" fill="#FCD34D" filter="url(#glow-flow)">
+                    <animateMotion dur="2s" begin="1s" repeatCount="indefinite" path="M 170 60 Q 250 60 380 100"/>
+                </circle>
+                <circle r="4" fill="#FCA5A5" filter="url(#glow-flow)">
+                    <animateMotion dur="2.5s" begin="1.25s" repeatCount="indefinite" path="M 170 180 Q 250 180 380 140"/>
+                </circle>
+            </svg>
+            <div style="text-align:center; color:#94A3B8; font-size:14px; margin-top:24px; line-height: 1.6;">
+                Les requêtes sont transparentes pour le Backend : PostgreSQL interroge les bases distantes à la volée via <strong>mysql_fdw</strong> et <strong>tds_fdw</strong>. Aucune duplication des données distantes.
+            </div>
+        </div>
+
+        <div class="cards-grid" style="margin-bottom:48px">
+            <div class="card">
+                <div class="card-icon">👤</div>
+                <h3>vue_client_complet</h3>
+                <p>Profil client unifié avec score de risque — jointure <strong>PostgreSQL</strong> (client) + <strong>MySQL</strong> (scoring).</p>
+            </div>
+            <div class="card">
+                <div class="card-icon">📋</div>
+                <h3>vue_credit_detail</h3>
+                <p>Dossier de crédit complet — jointure <strong>PostgreSQL</strong> (compte) + <strong>MySQL</strong> (dossier_credit, garantie).</p>
+            </div>
+            <div class="card">
+                <div class="card-icon">📊</div>
+                <h3>vue_operation_comptable</h3>
+                <p>Opérations bancaires avec écritures comptables — jointure <strong>PostgreSQL</strong> (transaction) + <strong>SQL Server</strong> (ecriture_comptable).</p>
+            </div>
+            <div class="card">
+                <div class="card-icon">📈</div>
+                <h3>mv_tableau_bord</h3>
+                <p>Vue matérialisée des indicateurs clés par agence — combine <strong>les 3 sources</strong> avec rafraîchissement à la demande.</p>
+            </div>
+        </div>
+        <table class="comparison-table">
+            <thead><tr><th>Vue</th><th>Sources</th><th>Lignes</th><th>Usage</th></tr></thead>
+            <tbody>
+                <tr><td>vue_client_complet</td><td>PG + MySQL</td><td>20</td><td>Profil client 360°</td></tr>
+                <tr><td>vue_credit_detail</td><td>PG + MySQL</td><td>15</td><td>Gestion des prêts</td></tr>
+                <tr><td>vue_operation_comptable</td><td>PG + SQL Server</td><td>50</td><td>Comptabilité</td></tr>
+                <tr><td>vue_tableau_bord</td><td>PG + MySQL + SQL Server</td><td>5</td><td>KPIs par agence</td></tr>
+                <tr><td>mv_clients_risque_eleve</td><td>PG + MySQL</td><td>—</td><td>Alertes risque</td></tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section id="backend" class="section">
+    <div class="fade-in" style="max-width:1200px;margin:0 auto">
+        <div class="section-label">Backend</div>
+        <h2 class="section-title">FastAPI <em>asynchrone</em></h2>
+        <p class="section-desc">Python 3.12, SQLAlchemy 2.0, Pydantic v2 — Architecture orientée services avec data validation stricte.</p>
+        
+        <div class="pipeline-graph">
+            <div class="pipe-node" style="box-shadow: 0 0 20px rgba(212,168,67,0.1);">
+                <span class="icon">📡</span>
+                <strong>API FastAPI</strong>
+                <span class="desc">9 Routeurs Asynchrones</span>
+            </div>
+            <div class="pipe-arrow"></div>
+            <div class="pipe-node" style="border-color: rgba(45,212,191,0.5); box-shadow: 0 0 20px rgba(45,212,191,0.1);">
+                <span class="icon">⚙️</span>
+                <strong>Logique Métier</strong>
+                <span class="desc">7 Services (CRUD)</span>
+            </div>
+            <div class="pipe-arrow"></div>
+            <div class="pipe-node" style="border-color: rgba(239,68,68,0.5); box-shadow: 0 0 20px rgba(239,68,68,0.1);">
+                <span class="icon">🛡️</span>
+                <strong>Pydantic v2</strong>
+                <span class="desc">9 Schémas de Validation</span>
+            </div>
+            <div class="pipe-arrow"></div>
+            <div class="pipe-stack">
+                <div class="pipe-node" style="border-color: rgba(34,197,94,0.5); width: 140px; padding: 12px;">
+                    <span class="icon" style="font-size:18px; margin-bottom:4px;">🐘</span>
+                    <strong>asyncpg</strong>
+                </div>
+                <div class="pipe-node" style="border-color: rgba(245,158,11,0.5); width: 140px; padding: 12px;">
+                    <span class="icon" style="font-size:18px; margin-bottom:4px;">🐬</span>
+                    <strong>aiomysql</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="cards-grid" style="margin-top:24px">
+            <div class="card" style="padding: 24px; min-height: auto;">
+                <h3 style="font-size:16px;">🔐 ICF — SHA-256</h3>
+                <p style="font-size:13px;">Identifiant Client Faible (numéro_piece + "TOGO_BK001") converti en hash et tronqué à 64 caractères hexadécimaux.</p>
+            </div>
+            <div class="card" style="padding: 24px; min-height: auto;">
+                <h3 style="font-size:16px;">📡 Observabilité</h3>
+                <p style="font-size:13px;">Métriques custom (db_connections_active, durées de requête) envoyées via prometheus-fastapi-instrumentator.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="frontend" class="section section-alt">
+    <div class="fade-in" style="max-width:1200px;margin:0 auto">
+        <div class="section-label">Frontend</div>
+        <h2 class="section-title">React 18 <em>+ Vite 5</em></h2>
+        <p class="section-desc">Interface moderne avec Tailwind CSS 4, Recharts, lucide-react — 17 routes métier encapsulées dans une Single Page Application.</p>
+        
+        <div class="mock-dashboard">
+            <div class="mock-sidebar">
+                <div style="color: #D4A843; font-family: 'Playfair Display', serif; font-size:18px; margin-bottom: 30px; font-weight:700;">BANQUE_TG</div>
+                <div class="mock-menu-item" style="opacity: 1;"></div>
+                <div class="mock-menu-item" style="opacity: 0.6;"></div>
+                <div class="mock-menu-item" style="opacity: 0.4;"></div>
+                <div class="mock-menu-item" style="opacity: 0.3;"></div>
+                <div class="mock-menu-item" style="opacity: 0.2;"></div>
+            </div>
+            <div class="mock-main">
+                <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+                    <div>
+                        <div style="font-size:22px; color:#F1F5F9; font-weight:600;">Dashboard Fédéré</div>
+                        <div style="color: #64748B; font-size:13px; margin-top:4px;">Vue unifiée PgSQL + MySQL + MSSQL</div>
+                    </div>
+                    <div style="background:rgba(212,168,67,0.1); color:#D4A843; padding:6px 12px; border-radius:6px; font-size:12px;">React 18 + Recharts</div>
+                </div>
+
+                <div class="mock-kpi-row">
+                    <div class="mock-kpi">
+                        <div style="font-size:12px; color:#94A3B8;">Comptes globaux</div>
+                        <div style="font-size:24px; color:#F1F5F9; margin-top:8px;">103,8 M XOF</div>
+                    </div>
+                    <div class="mock-kpi">
+                        <div style="font-size:12px; color:#94A3B8;">Crédits ouverts</div>
+                        <div style="font-size:24px; color:#2DD4BF; margin-top:8px;">15 Dossiers</div>
+                    </div>
+                    <div class="mock-kpi">
+                        <div style="font-size:12px; color:#94A3B8;">Alertes Risques</div>
+                        <div style="font-size:24px; color:#EF4444; margin-top:8px;">3 Critiques</div>
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
+                    <div class="mock-chart-box" style="align-items:flex-end; gap:8px;">
+                        <div class="mock-bar" style="height: 60%; background:#2DD4BF;"></div>
+                        <div class="mock-bar" style="height: 40%"></div>
+                        <div class="mock-bar" style="height: 90%; background:#EF4444;"></div>
+                        <div class="mock-bar" style="height: 20%"></div>
+                        <div class="mock-bar" style="height: 50%"></div>
+                    </div>
+                    <div class="mock-chart-box" style="flex-direction:column; align-items:flex-start; justify-content:center;">
+                        <span style="font-size:14px; color:#F1F5F9;">Navigation Graphique</span>
+                        <p style="font-size:12px; color:#94A3B8; margin-top:8px;">17 routes configurées : listes avec filtres (clients, crédits), tableaux de cohérence (réconciliation) et pages de statuts système.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="monitoring" class="section">
+    <div class="fade-in" style="max-width:1200px;margin:0 auto">
+        <div class="section-label">Observabilité</div>
+        <h2 class="section-title">Prometheus <em>+ Grafana</em></h2>
+        <p class="section-desc">Stack de monitoring complet avec 5 conteneurs dédiés, provisionnement automatique de cibles : FastAPI, PostgreSQL, MySQL Exporters.</p>
+        
+        <div class="grafana-grid">
+            <div class="grafana-panel">
+                <span class="gf-title">db_connections_active</span>
+                <span class="gf-value">24</span>
+                <div class="gf-chart">
+                    <div class="gf-line"></div>
+                </div>
+            </div>
+            <div class="grafana-panel">
+                <span class="gf-title">api_query_p95_latency</span>
+                <span class="gf-value" style="color:#F2495C;">142 ms</span>
+                <div class="gf-chart">
+                    <div class="gf-line red"></div>
+                </div>
+            </div>
+            <div class="grafana-panel">
+                <span class="gf-title">fdw_connection_status</span>
+                <span class="gf-value" style="color:#73BF69;">100 % UP</span>
+                <div class="gf-chart" style="align-items:flex-end;">
+                     <div style="width:18%; height:90%; background:rgba(115,191,105,0.7); border-radius:2px;"></div>
+                     <div style="width:18%; height:95%; background:rgba(115,191,105,0.7); border-radius:2px;"></div>
+                     <div style="width:18%; height:100%; background:rgba(115,191,105,0.7); border-radius:2px;"></div>
+                     <div style="width:18%; height:85%; background:rgba(115,191,105,0.7); border-radius:2px;"></div>
+                     <div style="width:18%; height:100%; background:rgba(115,191,105,0.7); border-radius:2px;"></div>
+                </div>
+            </div>
+            <div class="grafana-panel" style="display:flex; flex-direction:column; justify-content:center;">
+                <h4 style="color:#E2E8F0; margin-bottom:8px;">Supervision temps réel</h4>
+                <p style="color:#8E9297; font-size:13px; line-height:1.6;">Grafana offre des panneaux configurés via JSON provisionné. Le métrique personnalisé côté FastAPI remonte la santé des connexions FDW vers MySQL et SQL Server.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="erreurs" class="section section-alt">
+    <div class="fade-in" style="max-width:900px;margin:0 auto">
+        <div class="section-label">Cas pratique</div>
+        <h2 class="section-title">15 erreurs <em>rencontrées et résolues</em></h2>
+        <p class="section-desc">Chaque erreur documentée dans <strong>RAPPORT_ERREURS.md</strong> avec cause racine, solution et impact. Aucune erreur bloquante en cours.</p>
+
+        <div class="metrics-bar" style="margin-bottom:48px">
+            <div class="metric"><div class="val">3</div><div class="lbl">Critiques</div></div>
+            <div class="metric"><div class="val">6</div><div class="lbl">Hautes</div></div>
+            <div class="metric"><div class="val">3</div><div class="lbl">Moyennes</div></div>
+            <div class="metric"><div class="val">15/15</div><div class="lbl">Résolues ✓</div></div>
+        </div>
+
+        <div class="error-filter-row" id="error-filters">
+            <button class="filter-chip active" data-error-filter="all">Toutes</button>
+            <button class="filter-chip" data-error-filter="infra">Infrastructure</button>
+            <button class="filter-chip" data-error-filter="fdw">FDW</button>
+            <button class="filter-chip" data-error-filter="app">App</button>
+            <button class="filter-chip" data-error-filter="data">Données</button>
+        </div>
+
+        <div class="timeline">
+            <div class="tl-item" data-error-group="infra">
+                <h4>🐳 Docker & Infrastructure (3 erreurs)</h4>
+                <p><strong>ERR-001</strong> — Permission chmod dans le Dockerfile mssql-compta : <code>USER mssql</code> déclaré avant COPY/chmod → déplacé après.</p>
+                <p><strong>ERR-003</strong> — Ports 5432, 3306, 1433 occupés localement → mapping vers 5435, 3308, 1435.</p>
+                <p><strong>ERR-005</strong> — Résolution DNS entre conteneurs : réseau Docker différent après restart → <code>docker compose down &amp;&amp; up</code>.</p>
+                <span class="err-tag resolved">Résolu</span>
+            </div>
+            <div class="tl-item" data-error-group="fdw">
+                <h4>🔗 FDW & Fédération (3 erreurs)</h4>
+                <p><strong>ERR-004</strong> — Option <code>dbname</code> invalide pour mysql_fdw au niveau serveur → déplacée dans chaque FOREIGN TABLE.</p>
+                <p><strong>ERR-009</strong> — FDW non initialisés après restart → script <code>post-init.sh</code> en arrière-plan.</p>
+                <p><strong>ERR-014</strong> — Format de date tds_fdw <code>Jan 10 2024 12:00:00:AM</code> → colonnes en VARCHAR(30) + TO_DATE().</p>
+                <span class="err-tag critical">Critique</span>
+                <span class="err-tag resolved">Résolu</span>
+            </div>
+            <div class="tl-item" data-error-group="app">
+                <h4>⚙️ Backend & Frontend (3 erreurs)</h4>
+                <p><strong>ERR-010</strong> — <code>pool_pre_ping</code> incompatible avec asyncpg/aiomysql → retiré, health check via SELECT 1.</p>
+                <p><strong>ERR-011</strong> — Tests pytest async : <code>asyncio_mode = auto</code> manquant + fixtures non décorées → centralisé dans conftest.py.</p>
+                <p><strong>ERR-013</strong> — Frontend appelle sans préfixe /api → <code>VITE_API_URL=http://localhost:8000/api</code>.</p>
+                <span class="err-tag high">Haute</span>
+                <span class="err-tag resolved">Résolu</span>
+            </div>
+            <div class="tl-item" data-error-group="data">
+                <h4>💾 Données & Seed (5 erreurs)</h4>
+                <p><strong>ERR-002</strong> — Trigger MySQL créé avant sa table → ordre inversé dans le script.</p>
+                <p><strong>ERR-006</strong> — ICF de 65 caractères pour CHAR(64) → troncature sed.</p>
+                <p><strong>ERR-007</strong> — Montant 0.00 viole CHECK(montant &gt; 0) → remplacé par 1.00.</p>
+                <p><strong>ERR-012</strong> — Table transaction vide : auto-incrément désynchronisé → <code>TRUNCATE ... RESTART IDENTITY</code>.</p>
+                <p><strong>ERR-015</strong> — Violation PK plan_comptable (seed exécuté 2×) → ignoré via <code>|| true</code>.</p>
+                <span class="err-tag resolved">Résolu</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section" style="text-align:center;padding-bottom:80px">
+    <div class="fade-in">
+        <h2 class="section-title" style="max-width:800px;margin:0 auto 24px">Prêt à <em>explorer</em> le projet ?</h2>
+        <p style="color:#94A3B8;margin-bottom:32px;font-size:17px">
+            Documentation complète dans <strong style="color:#D4A843">AGENTS.md</strong> —<br>
+            Stack technique, conventions, pièges et procédures de test.
+        </p>
+        <div class="hero-actions" style="justify-content:center">
+            <a href="#explorer" class="btn btn-ghost">Rejouer la démo</a>
+            <a href="#monitoring" class="btn btn-primary">Voir l'observabilité</a>
+        </div>
+    </div>
+</section>
+
+<footer>
+    <strong>SBFD</strong> — Système de Bases de Données Fédérées · Banque du Togo · Mai 2026<br>
+    PostgreSQL · MySQL · SQL Server · FastAPI · React · Prometheus · Grafana · Docker
+</footer>
+
+<div class="sticky-float">
+    <span class="pulse-led" aria-hidden="true"></span>
+    <span>Projet prêt pour <strong>la soutenance</strong></span>
+</div>
+
+<script>
+    const architectureJourney = {
+        capture: {
+            title: "1. Capture côté interface",
+            text: "Le point d'entrée le plus convaincant en soutenance est l'interface React. Une action simple sur Dashboard, Clients ou Credits donne immédiatement une narration visible et rassurante pour le jury.",
+            flow: ["React UI", "Axios", "VITE_API_URL"],
+            badges: ["17 routes visibles", "Navigation métier", "Filtres + tableaux"],
+            points: [
+                { label: "Intérêt soutenance", text: "Montrer une page réelle avant de parler SQL rend le projet plus concret." },
+                { label: "Exemple", text: "Sélectionner un client, puis dérouler sa fiche enrichie avec crédit et scoring." }
+            ]
+        },
+        api: {
+            title: "2. Orchestration FastAPI",
+            text: "Le backend est la couche de traduction entre les écrans et la fédération. Il porte les routeurs métier, les schémas Pydantic et les services qui donnent une forme bancaire cohérente aux données.",
+            flow: ["Axios", "FastAPI", "Services", "Schemas"],
+            badges: ["9 routeurs", "7 services", "12 tests backend"],
+            points: [
+                { label: "Valeur", text: "La logique métier est centralisée au lieu d'être disséminée dans le frontend." },
+                { label: "Exemple", text: "Le dashboard renvoie des KPIs agrégés directement exploitables par l'UI." }
+            ]
+        },
+        hub: {
+            title: "3. Hub PostgreSQL fédéré",
+            text: "PostgreSQL joue le rôle de centre nerveux. Il combine tables locales, foreign tables et vues matérialisées pour servir une lecture unifiée du système bancaire.",
+            flow: ["FastAPI", "PostgreSQL Hub", "Views", "Materialized Views"],
+            badges: ["8 foreign tables", "4 vues fédérées", "2 vues matérialisées"],
+            points: [
+                { label: "Point fort", text: "La fédération est visible et démontrable à l'écran, pas seulement décrite sur un schéma." },
+                { label: "Exemple", text: "vue_tableau_bord donne une synthèse par agence sans dupliquer les bases sources." }
+            ]
+        },
+        sources: {
+            title: "4. Sources spécialisées conservées",
+            text: "Le projet ne remplace pas les bases métiers, il les relie. MySQL garde la logique crédits/risque, SQL Server garde la comptabilité/RH, tout en restant interrogeables depuis PostgreSQL via FDW.",
+            flow: ["PostgreSQL Hub", "mysql_fdw", "MySQL", "tds_fdw", "SQL Server"],
+            badges: ["Crédits + risque", "Comptabilité OHADA", "Interopérabilité"],
+            points: [
+                { label: "Message jury", text: "On préserve l'existant tout en gagnant une vue transverse pour le pilotage." },
+                { label: "Limite assumée", text: "Les dates SQL Server nécessitent un mapping spécifique en VARCHAR(30) puis TO_DATE()." }
+            ]
+        }
+    };
+
+    const agencyDatasets = {
+        accounts: {
+            title: "Répartition des comptes actifs",
+            kicker: "30 comptes actifs fédérés sur 5 agences",
+            suffix: " comptes",
+            color: "",
+            items: [
+                { label: "Lomé", value: 8 },
+                { label: "Kpalimé", value: 6 },
+                { label: "Sokodé", value: 7 },
+                { label: "Kara", value: 6 },
+                { label: "Dapaong", value: 3 }
+            ]
+        },
+        credits: {
+            title: "Volume des crédits approuvés",
+            kicker: "46,5 M XOF observés dans le dashboard",
+            suffix: " XOF",
+            color: "teal",
+            items: [
+                { label: "Lomé", value: 21000000 },
+                { label: "Kpalimé", value: 22000000 },
+                { label: "Sokodé", value: 0 },
+                { label: "Kara", value: 3500000 },
+                { label: "Dapaong", value: 0 }
+            ]
+        },
+        balances: {
+            title: "Solde total des comptes",
+            kicker: "Vision agrégée issue de vue_tableau_bord",
+            suffix: " XOF",
+            color: "blue",
+            items: [
+                { label: "Lomé", value: 27810000 },
+                { label: "Kpalimé", value: 25450000 },
+                { label: "Sokodé", value: 34120000 },
+                { label: "Kara", value: 9420000 },
+                { label: "Dapaong", value: 7050000 }
+            ]
+        }
+    };
+
+    const agencyProfiles = {
+        "Lomé": {
+            note: "Agence vitrine pour la démonstration, forte activité sur comptes et crédit.",
+            risk: "Faible à moyen",
+            focus: "Montrer l'entrée métier la plus complète."
+        },
+        "Kpalimé": {
+            note: "Très forte activité crédit malgré un volume de comptes plus contenu.",
+            risk: "Moyen",
+            focus: "Illustrer la logique dossier, garantie et décision."
+        },
+        "Sokodé": {
+            note: "Leader sur les soldes du jeu de démonstration.",
+            risk: "Moyen à élevé",
+            focus: "Parfait pour commenter le pilotage agence."
+        },
+        "Kara": {
+            note: "Agence intermédiaire, utile pour comparer crédit et dépôts.",
+            risk: "Moyen",
+            focus: "Bonne base pour une comparaison inter-agences."
+        },
+        "Dapaong": {
+            note: "Périmètre plus réduit mais utile pour parler du risque élevé.",
+            risk: "Élevé",
+            focus: "Mettre en avant les alertes et la surveillance."
+        }
+    };
+
+    const scenarioData = {
+        credit: {
+            title: "Parcours responsable crédit",
+            text: "La démonstration idéale commence par la recherche d'un client, continue avec la vue complète enrichie par le scoring MySQL, puis se prolonge jusqu'à la décision de crédit et l'échéancier.",
+            bullets: [
+                "Le tableau Credits montre 15 dossiers avec statuts, garanties et échéances impayées.",
+                "Le projet permet de raconter un cas métier du dossier au remboursement.",
+                "Les niveaux de risque rendent la démo plus crédible devant le jury."
+            ]
+        },
+        director: {
+            title: "Parcours directeur d'agence",
+            text: "Le dashboard offre une lecture transverse : 30 comptes actifs, 103,85 M XOF de soldes globaux, 7 crédits approuvés et une comparaison immédiate entre les 5 agences.",
+            bullets: [
+                "Sokodé domine en soldes, Lomé et Kpalimé dominent en crédit.",
+                "La zone clients à risque élevé donne une lecture de priorisation métier.",
+                "La page Reconciliation complète bien la surveillance managériale."
+            ]
+        },
+        dba: {
+            title: "Parcours DBA / support",
+            text: "La page Fédération et la page Database rendent visible l'infrastructure logique : 8 foreign tables, 4 vues fédérées, versions des SGBD et état de peuplement des vues matérialisées.",
+            bullets: [
+                "La fédération n'est pas cachée : elle est démontrable à l'écran.",
+                "Le site peut servir d'introduction avant de basculer vers Swagger ou Grafana.",
+                "Les erreurs documentées montrent la maîtrise opérationnelle du projet."
+            ]
+        }
+    };
+
+    const hotspotData = {
+        client: {
+            title: "vue_client_complet",
+            text: "C'est la vue la plus convaincante côté agence. Elle unifie référentiel client, soldes de comptes et scoring de risque dans une seule lecture métier.",
+            meta: ["PG + MySQL", "20 clients", "ICF + score + solde"]
+        },
+        credit: {
+            title: "vue_credit_detail",
+            text: "Elle expose un dossier de crédit enrichi par les garanties et le détail d'échéancier, ce qui permet une démonstration très naturelle du cycle de décision.",
+            meta: ["PG + MySQL", "15 dossiers", "garanties + impayés"]
+        },
+        ops: {
+            title: "vue_operation_comptable",
+            text: "Cette vue rapproche opérations bancaires et écritures comptables. Elle illustre bien la logique fédérée orientée conformité et comptabilité.",
+            meta: ["PG + SQL Server", "écritures OHADA", "jointure par agence/date"]
+        },
+        dashboard: {
+            title: "vue_tableau_bord",
+            text: "C'est la vue de synthèse la plus stratégique. Elle agrège les comptes, les crédits et les volumes agence pour produire le cockpit de pilotage.",
+            meta: ["PG + MySQL + MSSQL", "5 agences", "base du dashboard"]
+        }
+    };
+
+    let selectedAgency = "Lomé";
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.15 });
+
+    document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function(e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            document.querySelector('.nav-links')?.classList.remove('open');
+        });
+    });
+
+    const navToggle = document.querySelector('.nav-toggle');
+    const navLinks = document.querySelector('.nav-links');
+    if (navToggle && navLinks) {
+        navToggle.addEventListener('click', () => {
+            const expanded = navLinks.classList.toggle('open');
+            navToggle.setAttribute('aria-expanded', String(expanded));
+        });
+        navToggle.setAttribute('aria-expanded', 'false');
+    }
+
+    const sectionNodes = [...document.querySelectorAll('section[id]')];
+    const navAnchors = [...document.querySelectorAll('.nav-links a')];
+    const sectionSpy = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                navAnchors.forEach(link => {
+                    link.classList.toggle('active', link.getAttribute('href') === `#${entry.target.id}`);
+                });
+            }
+        });
+    }, { threshold: 0.35 });
+    sectionNodes.forEach(section => sectionSpy.observe(section));
+
+    function updateScrollProgress() {
+        const progress = document.getElementById('scroll-progress');
+        if (!progress) return;
+        const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+        const percent = scrollable > 0 ? (window.scrollY / scrollable) * 100 : 0;
+        progress.style.width = `${Math.min(Math.max(percent, 0), 100)}%`;
+    }
+    window.addEventListener('scroll', updateScrollProgress, { passive: true });
+    updateScrollProgress();
+
+    function formatValue(value, suffix) {
+        if (suffix.trim() === 'XOF') {
+            return `${new Intl.NumberFormat('fr-FR').format(value)} XOF`;
+        }
+        return `${value}${suffix}`;
+    }
+
+    function renderJourney(key) {
+        const target = document.getElementById('journey-output');
+        const journey = architectureJourney[key];
+        if (!target || !journey) return;
+        target.innerHTML = `
+            <div class="journey-output-inner">
+                <div class="journey-badges">${journey.badges.map(item => `<span>${item}</span>`).join('')}</div>
+                <h3>${journey.title}</h3>
+                <p>${journey.text}</p>
+                <div class="journey-flow">${journey.flow.map((item, index) => `
+                    <span class="journey-node">${item}</span>${index < journey.flow.length - 1 ? '<span class="journey-arrow">→</span>' : ''}
+                `).join('')}</div>
+                <div class="journey-points">${journey.points.map(item => `
+                    <div><strong>${item.label}</strong><br>${item.text}</div>
+                `).join('')}</div>
+            </div>
+        `;
+    }
+
+    document.querySelectorAll('.journey-step').forEach(button => {
+        button.addEventListener('click', () => {
+            document.querySelectorAll('.journey-step').forEach(btn => {
+                btn.classList.remove('active');
+                btn.setAttribute('aria-pressed', 'false');
+            });
+            button.classList.add('active');
+            button.setAttribute('aria-pressed', 'true');
+            renderJourney(button.dataset.journey);
+        });
+        button.setAttribute('aria-pressed', button.classList.contains('active') ? 'true' : 'false');
+    });
+    renderJourney('capture');
+
+    function renderAgencyFocus(label) {
+        const panel = document.getElementById('agency-fact-panel');
+        const profile = agencyProfiles[label];
+        if (!panel || !profile) return;
+        const accounts = agencyDatasets.accounts.items.find(item => item.label === label)?.value || 0;
+        const credits = agencyDatasets.credits.items.find(item => item.label === label)?.value || 0;
+        const balances = agencyDatasets.balances.items.find(item => item.label === label)?.value || 0;
+        panel.innerHTML = `
+            <h4>${label} en focus</h4>
+            <p>${profile.note}</p>
+            <div class="agency-fact-grid">
+                <div class="agency-fact">
+                    <strong>${accounts} comptes actifs</strong>
+                    <span>Empreinte client visible dans le dashboard.</span>
+                </div>
+                <div class="agency-fact">
+                    <strong>${new Intl.NumberFormat('fr-FR').format(credits)} XOF</strong>
+                    <span>Crédits approuvés. ${profile.focus}</span>
+                </div>
+                <div class="agency-fact">
+                    <strong>${profile.risk}</strong>
+                    <span>Lecture risque recommandée pendant la soutenance.</span>
+                </div>
+            </div>
+            <div class="agency-fact-grid">
+                <div class="agency-fact">
+                    <strong>${new Intl.NumberFormat('fr-FR').format(balances)} XOF</strong>
+                    <span>Solde agrégé observé dans la vue fédérée.</span>
+                </div>
+                <div class="agency-fact">
+                    <strong>Message à dire</strong>
+                    <span>Cette agence illustre comment la fédération soutient le pilotage au-delà d'une seule base.</span>
+                </div>
+                <div class="agency-fact">
+                    <strong>Démo idéale</strong>
+                    <span>Commencer sur le dashboard puis basculer vers Clients ou Credits pour raconter un cas réel.</span>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderAgencyChart(mode) {
+        const target = document.getElementById('agency-chart');
+        const title = document.getElementById('agency-chart-title');
+        const kicker = document.getElementById('agency-chart-kicker');
+        const dataset = agencyDatasets[mode];
+        if (!target || !title || !kicker || !dataset) return;
+
+        title.textContent = dataset.title;
+        kicker.textContent = dataset.kicker;
+
+        const max = Math.max(...dataset.items.map(item => item.value), 1);
+        target.innerHTML = dataset.items.map(item => {
+            const width = (item.value / max) * 100;
+            return `
+                <div class="bar-row ${item.label === selectedAgency ? 'selected' : ''}" data-agency="${item.label}" tabindex="0" role="button" aria-pressed="${item.label === selectedAgency ? 'true' : 'false'}">
+                    <div class="bar-row-label">${item.label}</div>
+                    <div class="bar-row-track">
+                        <div class="bar-row-fill ${dataset.color}" style="width:${width}%"></div>
+                    </div>
+                    <div class="bar-row-value">${formatValue(item.value, dataset.suffix)}</div>
+                </div>
+            `;
+        }).join('');
+
+        target.querySelectorAll('.bar-row').forEach(row => {
+            const activate = () => {
+                selectedAgency = row.dataset.agency;
+                renderAgencyChart(mode);
+                renderAgencyFocus(selectedAgency);
+            };
+            row.addEventListener('click', activate);
+            row.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    activate();
+                }
+            });
+        });
+    }
+
+    document.querySelectorAll('#agency-mode button').forEach(button => {
+        button.addEventListener('click', () => {
+            document.querySelectorAll('#agency-mode button').forEach(btn => {
+                btn.classList.remove('active');
+                btn.setAttribute('aria-pressed', 'false');
+            });
+            button.classList.add('active');
+            button.setAttribute('aria-pressed', 'true');
+            renderAgencyChart(button.dataset.mode);
+        });
+        button.setAttribute('aria-pressed', button.classList.contains('active') ? 'true' : 'false');
+    });
+    renderAgencyChart('accounts');
+    renderAgencyFocus(selectedAgency);
+
+    function renderScenario(key) {
+        const output = document.getElementById('scenario-output');
+        const scenario = scenarioData[key];
+        if (!output || !scenario) return;
+        output.innerHTML = `
+            <h4>${scenario.title}</h4>
+            <p>${scenario.text}</p>
+            <ul>${scenario.bullets.map(item => `<li>${item}</li>`).join('')}</ul>
+        `;
+    }
+
+    document.querySelectorAll('.scenario-item').forEach(item => {
+        item.setAttribute('role', 'button');
+        item.setAttribute('tabindex', '0');
+        item.setAttribute('aria-pressed', item.classList.contains('active') ? 'true' : 'false');
+        const activate = () => {
+            document.querySelectorAll('.scenario-item').forEach(node => {
+                node.classList.remove('active');
+                node.setAttribute('aria-pressed', 'false');
+            });
+            item.classList.add('active');
+            item.setAttribute('aria-pressed', 'true');
+            renderScenario(item.dataset.scenario);
+        };
+        item.addEventListener('click', () => {
+            activate();
+        });
+        item.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                activate();
+            }
+        });
+    });
+    renderScenario('credit');
+
+    function renderHotspot(key) {
+        const card = document.getElementById('hotspot-card');
+        const hotspot = hotspotData[key];
+        if (!card || !hotspot) return;
+        card.innerHTML = `
+            <h4>${hotspot.title}</h4>
+            <p>${hotspot.text}</p>
+            <div class="hotspot-meta">${hotspot.meta.map(item => `<span>${item}</span>`).join('')}</div>
+        `;
+    }
+
+    document.querySelectorAll('.hotspot-btn').forEach(button => {
+        button.setAttribute('aria-pressed', button.classList.contains('active') ? 'true' : 'false');
+        button.addEventListener('click', () => {
+            document.querySelectorAll('.hotspot-btn').forEach(btn => {
+                btn.classList.remove('active');
+                btn.setAttribute('aria-pressed', 'false');
+            });
+            button.classList.add('active');
+            button.setAttribute('aria-pressed', 'true');
+            renderHotspot(button.dataset.hotspot);
+        });
+    });
+    renderHotspot('client');
+
+    const errorFilters = document.querySelectorAll('#error-filters .filter-chip');
+    const timelineItems = document.querySelectorAll('.timeline .tl-item');
+    errorFilters.forEach(button => {
+        button.setAttribute('aria-pressed', button.classList.contains('active') ? 'true' : 'false');
+        button.addEventListener('click', () => {
+            errorFilters.forEach(btn => {
+                btn.classList.remove('active');
+                btn.setAttribute('aria-pressed', 'false');
+            });
+            button.classList.add('active');
+            button.setAttribute('aria-pressed', 'true');
+            const group = button.dataset.errorFilter;
+            timelineItems.forEach(item => {
+                const visible = group === 'all' || item.dataset.errorGroup === group;
+                item.classList.toggle('hidden', !visible);
+            });
+        });
+    });
+
+    function animateCount(node) {
+        const raw = node.dataset.target;
+        if (!raw) return;
+        const target = Number(raw);
+        if (Number.isNaN(target)) return;
+        const duration = 1200;
+        const start = performance.now();
+        function frame(now) {
+            const progress = Math.min((now - start) / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            node.textContent = new Intl.NumberFormat('fr-FR').format(Math.round(target * eased));
+            if (progress < 1) requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+    }
+
+    document.querySelectorAll('.metric .val').forEach(node => {
+        const content = node.textContent.trim();
+        if (/^\d+$/.test(content)) {
+            node.dataset.target = content;
+            node.textContent = '0';
+            animateCount(node);
+        }
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && navLinks?.classList.contains('open')) {
+            navLinks.classList.remove('open');
+            navToggle?.setAttribute('aria-expanded', 'false');
+        }
+    });
+</script>
+</body>
+</html>

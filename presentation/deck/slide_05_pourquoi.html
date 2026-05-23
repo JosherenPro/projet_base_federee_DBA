@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { margin: 0; }
+        .slide-container {
+            width: 1280px; height: 720px;
+            background: #F7F8FC;
+            font-family: 'Inter', sans-serif;
+            color: #1F2937;
+            position: relative; overflow: hidden;
+            display: flex; flex-direction: column;
+        }
+        .header-bar {
+            background: #1A2E52; height: 90px;
+            padding: 0 60px;
+            display: flex; flex-direction: column; justify-content: center;
+            position: relative; flex-shrink: 0;
+        }
+        .header-bar .overline {
+            color: #B8860B; font-size: 11px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 3px; margin-bottom: 4px;
+        }
+        .header-bar h2 {
+            color: #FFFFFF; font-family: 'Space Grotesk', sans-serif;
+            font-size: 26px; font-weight: 700; margin: 0;
+        }
+        .header-bar .slide-num {
+            position: absolute; right: 60px; top: 50%;
+            transform: translateY(-50%);
+            color: #FFFFFF; font-family: 'Space Grotesk', sans-serif;
+            font-size: 24px; font-weight: 700;
+        }
+        .slide-content {
+            flex: 1; padding: 28px 56px;
+            overflow: hidden; position: relative;
+        }
+        .slide-content h3 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 18px; color: #1A2E52; margin: 0 0 12px 0;
+        }
+        .slide-content p, .slide-content li {
+            font-size: 15px; line-height: 1.45; color: #1F2937; margin-bottom: 8px;
+        }
+        .slide-content ul { margin: 0 0 8px 20px; padding: 0; }
+        .slide-content ul li::marker { color: #C0392B; }
+        .slide-content strong { color: #1A2E52; }
+        .two-col { display: flex; gap: 32px; }
+        .two-col .col-left { flex: 1.2; }
+        .two-col .col-right { flex: 1; }
+        pre {
+            background: #1e1e2e; border-radius: 8px; padding: 12px 14px;
+            font-size: 12px; line-height: 1.4; margin: 8px 0;
+            color: #abb2bf; font-family: Consolas, monospace;
+            white-space: pre-wrap;
+        }
+        code.inline {
+            background: #eef1f8; color: #C0392B;
+            padding: 1px 5px; border-radius: 4px; font-size: 0.88em;
+            font-family: Consolas, monospace;
+        }
+        .encadre {
+            background: #EEF1F8; border: 1px solid #D1D9E6;
+            border-left: 5px solid #C0392B; padding: 10px 14px;
+            border-radius: 0 8px 8px 0; margin: 10px 0;
+        }
+        .encadre p { font-family: Georgia, serif; font-style: italic;
+            color: #1F2937; margin: 0; font-size: 14px; }
+        table.data {
+            width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px;
+        }
+        table.data th {
+            background: #1A2E52; color: #fff; padding: 8px 10px; text-align: left;
+        }
+        table.data td {
+            padding: 6px 10px; border-bottom: 1px solid #D1D9E6;
+        }
+        table.data tr:nth-child(even) td { background: #EEF1F8; }
+        .plan-list { list-style: none; margin: 0; padding: 0; columns: 2; column-gap: 40px; }
+        .plan-list li {
+            padding: 6px 0 6px 36px; position: relative; font-size: 15px;
+            break-inside: avoid;
+        }
+        .plan-list li::before {
+            content: attr(data-n); position: absolute; left: 0;
+            width: 26px; height: 26px; background: #1A2E52; color: #fff;
+            border-radius: 50%; font-size: 12px; font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+            top: 4px;
+        }
+        .metrics { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; }
+        .metric-box {
+            flex: 1; min-width: 120px; background: #EEF1F8;
+            border: 1px solid #D1D9E6; border-radius: 8px;
+            padding: 14px; text-align: center;
+        }
+        .metric-box .val { font-size: 28px; font-weight: 700; color: #1A2E52; }
+        .metric-box .lbl { font-size: 11px; color: #6B7280; text-transform: uppercase; }
+        .slide-footer {
+            height: 36px; background: #f0f2f8; border-top: 1px solid #D1D9E6;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 60px; font-size: 12px; color: #6B7280; font-style: italic;
+            flex-shrink: 0;
+        }
+        /* Title slide */
+        .slide-title {
+            width: 1280px; height: 720px;
+            background: linear-gradient(135deg, #1A1A3A 0%, #2A2A5A 50%, #1A1A3A 100%);
+            font-family: 'Inter', sans-serif; color: #FFFFFF;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            position: relative; overflow: hidden;
+        }
+        .slide-title::before, .slide-title::after {
+            content: ''; position: absolute; left: 0; right: 0; height: 6px;
+        }
+        .slide-title::before { top: 0; background: #B8860B; }
+        .slide-title::after { bottom: 0; background: #E53E3E; }
+        .slide-title .content-box {
+            background: rgba(255,255,255,0.97); padding: 48px 64px;
+            border-radius: 16px; max-width: 880px; text-align: center;
+            box-shadow: 0 24px 60px rgba(0,0,0,0.4); z-index: 2;
+        }
+        .slide-title .overline {
+            color: #B8860B; font-size: 13px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 4px; margin-bottom: 12px;
+        }
+        .slide-title h1 {
+            font-family: 'Space Grotesk', sans-serif; font-size: 36px;
+            color: #1A1A3A; margin: 0 0 8px; font-weight: 700;
+        }
+        .slide-title .sep { width: 80px; height: 4px; background: #E53E3E; margin: 16px auto; }
+        .slide-title .subtitle { font-size: 17px; color: #4A5568; margin-bottom: 6px; }
+        .slide-title .meta { font-size: 14px; color: #718096; font-style: italic; }
+        .slide-title .footer-bar {
+            position: absolute; bottom: 20px; left: 60px; right: 60px;
+            display: flex; justify-content: space-between;
+            font-size: 12px; color: rgba(255,255,255,0.5); z-index: 2;
+        }
+        /* Conclusion slide */
+        .slide-conclusion {
+            width: 1280px; height: 720px;
+            background: #1A2E52;
+            font-family: 'Inter', sans-serif;
+            display: flex; flex-direction: column;
+            padding: 48px 60px; box-sizing: border-box;
+        }
+        .slide-conclusion h2 {
+            color: #fff; font-family: 'Space Grotesk', sans-serif;
+            font-size: 28px; margin: 0 0 24px;
+        }
+        .slide-conclusion .cards { display: flex; gap: 16px; flex-wrap: wrap; flex: 1; }
+        .slide-conclusion .card {
+            flex: 1; min-width: 200px; background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15); border-radius: 12px;
+            padding: 20px; color: #E2E8F0; font-size: 14px; line-height: 1.5;
+        }
+        .slide-conclusion .card strong { color: #B8860B; display: block; margin-bottom: 8px; }
+        .slide-conclusion .quote {
+            margin-top: 20px; padding: 16px 20px;
+            border-left: 4px solid #B8860B;
+            color: rgba(255,255,255,0.9); font-style: italic; font-size: 15px;
+        }
+        .slide-conclusion .foot {
+            color: rgba(255,255,255,0.5); font-size: 12px;
+            display: flex; justify-content: space-between; margin-top: 16px;
+        }
+</style>
+</head>
+<body>
+    <div class="slide-container">
+        <div class="header-bar">
+            <div class="overline">Pourquoi</div>
+            <h2>Le pourquoi (Why)</h2>
+            <div class="slide-num">5</div>
+        </div>
+        <div class="slide-content">
+        <div class="two-col">
+            <div class="col-left">
+                <h3>Pourquoi fédérer ?</h3>
+                <ul>
+                    <li><strong>Héritage</strong> : migration totale = risque prohibitif</li>
+                    <li><strong>Continuité</strong> : chaque SGBD reste source de vérité</li>
+                    <li><strong>Conformité</strong> : OHADA + BCEAO préservés</li>
+                    <li><strong>Décision</strong> : vue client + KPIs temps réel</li>
+                </ul>
+            </div>
+            <div class="col-right">
+                <h3>Objectifs mesurables</h3>
+                <ol style="margin-left:20px;font-size:15px;line-height:1.6">
+                    <li>Une <strong>API REST</strong> unique</li>
+                    <li><strong>Vues fédérées SQL</strong> sur 3 sources</li>
+                    <li><strong>Interface web</strong> en français</li>
+                    <li><strong>Observabilité</strong> FDW + bases</li>
+                    <li><strong>ICF</strong> comme clé de réconciliation</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+        <div class="slide-footer">
+            <span>FedBank Togo — BDD Fédérées</span>
+            <span>5 / 25</span>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,42 @@
+services:
+  postgres-hub:
+    ports:
+      - "15435:5432"
+
+  mysql-credit:
+    ports:
+      - "13308:3306"
+
+  mssql-compta:
+    ports:
+      - "11435:1433"
+
+  fastapi-backend:
+    ports:
+      - "18000:8000"
+
+  react-frontend:
+    ports:
+      - "13000:3000"
+    environment:
+      VITE_API_URL: http://localhost:18000/api
+
+  prometheus:
+    ports:
+      - "19090:9090"
+
+  grafana:
+    ports:
+      - "13001:3000"
+
+  postgres-exporter:
+    ports:
+      - "19187:9187"
+
+  mysql-exporter:
+    ports:
+      - "19104:9104"
+
+  cadvisor:
+    ports:
+      - "18081:8080"

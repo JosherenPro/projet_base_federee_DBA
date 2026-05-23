@@ -1,0 +1,29 @@
+{
+  "slides": [
+    "slide_01_titre.html",
+    "slide_02_plan.html",
+    "slide_03_entreprise.html",
+    "slide_04_probleme.html",
+    "slide_05_pourquoi.html",
+    "slide_06_comment.html",
+    "slide_07_alternatives.html",
+    "slide_08_solution.html",
+    "slide_09_valeur.html",
+    "slide_10_architecture.html",
+    "slide_11_donnees.html",
+    "slide_12_application.html",
+    "slide_13_fonctionnalites.html",
+    "slide_14_parcours.html",
+    "slide_15_deploiement.html",
+    "slide_16_erreurs_synthese.html",
+    "slide_17_erreurs_docker.html",
+    "slide_18_erreurs_fdw.html",
+    "slide_19_erreurs_app.html",
+    "slide_20_lecons.html",
+    "slide_21_resultats.html",
+    "slide_22_securite.html",
+    "slide_23_tests.html",
+    "slide_24_perspectives.html",
+    "slide_25_conclusion.html"
+  ]
+}
