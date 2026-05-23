@@ -1,457 +1,575 @@
-# Systeme de Bases de Donnees Federees - Banque Commerciale du Togo
+# Administration de Bases de Donnees Federees - Banque Commerciale du Togo
 
 [![GitHub](https://img.shields.io/badge/Repo-github.com/votre--organisation/projet--fin--dba-181717)](https://github.com/votre-organisation/projet-fin-dba)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-00a86b)](https://fastapi.tiangolo.com)
-[![React](https://img.shields.io/badge/React-18+-61dafb)](https://reactjs.org)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791)](https://www.postgresql.org)
 [![MySQL](https://img.shields.io/badge/MySQL-8.0-4479a1)](https://www.mysql.com)
 [![SQL Server](https://img.shields.io/badge/SQL%20Server-2022-cc2927)](https://www.microsoft.com/en-us/sql-server)
 
-## Description
-
-Ce projet implemente un **systeme de bases de donnees federees** pour la gestion integree des donnees d'une banque commerciale au Togo. Il offre une interface d'acces unifiee a **trois sources de donnees heterogenes** (PostgreSQL, MySQL, SQL Server) interconnectees via **Foreign Data Wrappers (FDW)**, tout en preservant l'autonomie de chaque base.
-
-Le systeme couvre les domaines suivants :
-- **Gestion des clients et comptes** (PostgreSQL - Hub central)
-- **Credits et scoring risque** (MySQL)
-- **Comptabilite et ressources humaines** (SQL Server)
-
-> **Normes respectees** : OHADA (comptabilite), BCEAO/UEMOA (reglementation bancaire)
+**Universite de Lome** — **Departement de Genie Informatique** — **Licence 3**
+**UE : Administration des Bases de Donnees**
 
 ---
 
-## Architecture
+## Vue d'ensemble
+
+Ce projet met en place une **architecture a 3 SGBD heterogenes** intercommunicants via une couche de federation. Chaque SGBD est autonome dans son domaine mais participe a un systeme d'information integre.
 
 ```
-                     +-----------------------------------+
-                     |      INTERFACE WEB (React 18)     |
-                     |           Port 3000               |
-                     +---------------|-------------------+
-                                     |
-                     +---------------|-------------------+
-                     |       BACKEND FastAPI (Python)     |
-                     |           Port 8000                |
-                     +---------------|-------------------+
-                                     |
-                     +---------------|-------------------+
-                     |    PostgreSQL 16 (HUB CENTRAL)     |
-                     |    Port 5435                       |
-                     |    + mysql_fdw + tds_fdw           |
-                     +------|--------------------|-------+
-                            |                    |
-              +-------------|----+    +----------|----------+
-              |   MySQL 8.0       |    |  SQL Server 2022   |
-              |   Port 3308       |    |  Port 1435         |
-              |   Credits &       |    |  Comptabilite &    |
-              |   Risque          |    |  RH                |
-              +-------------------+    +--------------------+
++============================================================================+
+|                        RESEAU DOCKER : reseau-banque                       |
+|                         Bridge, 172.x.0.0/16                              |
++============================================================================+
+         |                         |                         |
++-------------------+  +--------------------+  +------------------------+
+|   SGBD 1 : HUB    |  |  SGBD 2 : CREDITS  |  |  SGBD 3 : COMPTA      |
+|   PostgreSQL 16   |  |  MySQL 8.0         |  |  SQL Server 2022      |
+|   Conteneur :     |  |  Conteneur :       |  |  Conteneur :          |
+|   postgres-hub    |  |  mysql-credit      |  |  mssql-compta         |
+|   Port interne:   |  |  Port interne:     |  |  Port interne:        |
+|   5432            |  |  3306              |  |  1433                 |
+|   Port hote:      |  |  Port hote:        |  |  Port hote:           |
+|   5435            |  |  3308              |  |  1435                 |
++-------------------+  +--------------------+  +------------------------+
+         |                         |                         |
+         |     Couche FDW          |                         |
+         |  (Foreign Data          |                         |
+         |   Wrappers)             |                         |
+         |  mysql_fdw              |                         |
+         |  tds_fdw                |                         |
+         +-------------------------+-------------------------+
+         |                         |                         |
+         +---------------------------------------------------+
+         |                    FASTAPI                         |
+         |              uvicorn :8000                         |
+         +---------------------------------------------------+
+         |                    REACT                           |
+         |              vite :3000                            |
+         +---------------------------------------------------+
 ```
 
-### Stack Monitoring
+---
+
+## Architecture des 3 SGBD
+
+### 1. PostgreSQL 16 — Hub central
 
 ```
-Prometheus (Port 9090)  -->  postgres-exporter (9187)
-                         -->  mysql-exporter (9104)
-                         -->  cadvisor (8081)
-                         -->  Grafana (Port 3001)
+CONTAINER: postgres-hub
+IMAGE:     postgres:16 + mysql_fdw + tds_fdw (custom Dockerfile)
+PORT:      interne 5432 -> hote 5435
+VOLUME:    pg_data (persistance)
+ROLE:      Hub federateur + donnees locales
+```
+
+Le hub central est construit a partir d'une image PostgreSQL 16 enrichie des extensions FDW :
+
+```dockerfile
+FROM postgres:16
+
+# Installation des extensions FDW depuis les sources
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    postgresql-server-dev-16 git build-essential \
+    libmysqlclient-dev libssl-dev unixodbc-dev \
+    && git clone https://github.com/EnterpriseDB/mysql_fdw.git \
+    && cd mysql_fdw && make && make install \
+    && git clone https://github.com/tds-fdw/tds_fdw.git \
+    && cd tds_fdw && make && make install
+```
+
+Il heberge :
+- **5 tables locales** : `agence`, `employe`, `client`, `compte`, `transaction`
+- **8 tables distantes FDW** pointant vers MySQL et SQL Server
+- **4 vues federees** combinant donnees locales et distantes
+- **2 vues materialisees** pour les indicateurs de performance
+
+**Initialisation** (ordre chronologique) :
+
+```
+postgres-hub/init/           # 1. DDL des tables locales
+  ├── 01-schema.sql          #    CREATE TABLE + contraintes
+  ├── 02-index.sql           #    CREATE INDEX
+  └── 03-functions.sql       #    Fonctions PL/pgSQL (generation ICF)
+
+postgres-hub/fdw-init/       # 2. Configuration FDW (execute apres)
+  ├── 01-mysql-server.sql    #    CREATE SERVER mysql_server
+  ├── 02-mysql-tables.sql    #    CREATE FOREIGN TABLE (4)
+  ├── 03-mssql-server.sql    #    CREATE SERVER mssql_server
+  ├── 04-mssql-tables.sql    #    CREATE FOREIGN TABLE (4)
+  ├── 05-views.sql           #    CREATE VIEW (vues federees)
+  └── 06-materialized-views.sql  # CREATE MATERIALIZED VIEW
+
+postgres-hub/seed/           # 3. Donnees de test
+  └── seed.sql               #    INSERT (idempotent, TRUNCATE + RESTART)
+```
+
+**Script de post-init differe** :
+
+Le fichier `post-init/post-init.sh` attend que MySQL et SQL Server soient operants avant de lancer les scripts FDW :
+
+```bash
+#!/bin/bash
+until mysql -h mysql-credit -u fdw_user -pFdwT0g0!2025 -e "SELECT 1"; do
+  echo "Attente de MySQL..."
+  sleep 2
+done
+
+until /opt/mssql-tools18/bin/sqlcmd -S mssql-compta -U fdw_user \
+  -P FdwMssqlT0g0! -C -Q "SELECT 1"; do
+  echo "Attente de SQL Server..."
+  sleep 2
+done
+
+# Execution des scripts FDW
+psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f /docker-entrypoint-initdb.d/fdw-init/01-mysql-server.sql
+# ...
+```
+
+### 2. MySQL 8.0 — Credits & Risque
+
+```
+CONTAINER: mysql-credit
+IMAGE:     mysql:8.0 (custom avec my.cnf)
+PORT:      interne 3306 -> hote 3308
+VOLUME:    mysql_data (persistance)
+ROLE:      Gestion des credits, garanties, echeanciers et scoring risque
+```
+
+SGBD source specialise dans le domaine du risque bancaire. Configuration reseau :
+
+```ini
+# my.cnf : ecoute sur toutes les interfaces (necessaire pour FDW)
+bind-address = 0.0.0.0
+port = 3306
+```
+
+**Initialisation** :
+
+```
+mysql-credit/init/
+  ├── 01-tables.sql          # CREATE TABLE dossier_credit, garantie, echeancier, scoring
+  ├── 02-user.sql            # CREATE USER fdw_user + privileges
+  └── 03-seed.sql            # INSERT donnees de test
+```
+
+**Comptes utilisateurs** :
+
+| Utilisateur | Mot de passe | Privileges |
+|-------------|--------------|------------|
+| `credit_user` | `Cr3ditT0g0!` | Acces applicatif (SELECT, INSERT, UPDATE) |
+| `fdw_user` | `FdwT0g0!2025` | Acces FDW (SELECT only) |
+| `root` | `R00tT0g0!` | Administration |
+
+### 3. SQL Server 2022 — Comptabilite & RH
+
+```
+CONTAINER: mssql-compta
+IMAGE:     mssql/server:2022-latest
+PORT:      interne 1433 -> hote 1435
+VOLUME:    mssql_data (persistance)
+ROLE:      Comptabilite OHADA + gestion du personnel
+```
+
+SGBD source pour les donnees comptables et RH. Particularite : acceptation de la licence (ACCEPT_EULA).
+
+**Initialisation** :
+
+```
+mssql-compta/init/
+  ├── 01-tables.sql          # CREATE TABLE plan_comptable, ecriture_comptable,
+  │                          #   bulletin_paie, operation_agence
+  ├── 02-index.sql           # CREATE INDEX
+  └── 03-user.sql            # CREATE USER fdw_user + GRANT
+
+mssql-compta/seed/
+  └── seed.sql               # INSERT donnees de test
+```
+
+**Comptes utilisateurs** :
+
+| Utilisateur | Mot de passe | Role |
+|-------------|--------------|------|
+| `sa` | `C0mptaT0g0!2025` | Administrateur systeme |
+| `fdw_user` | `FdwMssqlT0g0!` | Lecture seule pour FDW |
+
+**Particularite tds_fdw** : Les colonnes DATE de SQL Server sont retournees au format `VARCHAR(30)` par le wrapper FreeTDS. Exemple de valeur : `Jan 10 2024 12:00:00:AM`. Les vues federees utilisent `TO_DATE()` pour convertir.
+
+---
+
+## Couche de Federation (FDW)
+
+### Principe de fonctionnement
+
+Les Foreign Data Wrappers permettent a PostgreSQL d'interroger des donnees stockees dans d'autres SGBD sans duplication ni ETL :
+
+```
++-------------------+         +-------------------+
+|   PostgreSQL      |         |   MySQL           |
+|   Requete SQL     |  --->   |   Donnees         |
+|   SELECT * FROM   |  mysql_fdw                |
+|   fdw_dossier_    |  <---   |   Resultats       |
+|   credit          |         |                   |
++-------------------+         +-------------------+
+         |
+         | Planificateur PostgreSQL
+         | (delegue la partie distante
+         |  au wrapper FDW)
+         v
++-------------------+
+|   Resultat        |
+|   combine         |
++-------------------+
+```
+
+### Configuration des serveurs etrangers
+
+**mysql_fdw** :
+
+```sql
+-- Extension
+CREATE EXTENSION IF NOT EXISTS mysql_fdw;
+
+-- Serveur etranger pointant vers MySQL
+CREATE SERVER mysql_server
+  FOREIGN DATA WRAPPER mysql_fdw
+  OPTIONS (host 'mysql-credit', port '3306', database 'banque_credit');
+
+-- Mapping de l'utilisateur PostgreSQL vers l'utilisateur MySQL
+CREATE USER MAPPING FOR banque_admin
+  SERVER mysql_server
+  OPTIONS (username 'fdw_user', password 'FdwT0g0!2025');
+```
+
+**tds_fdw** :
+
+```sql
+-- Extension
+CREATE EXTENSION IF NOT EXISTS tds_fdw;
+
+-- Serveur etranger pointant vers SQL Server via FreeTDS
+CREATE SERVER mssql_server
+  FOREIGN DATA WRAPPER tds_fdw
+  OPTIONS (servername 'mssql-compta', port '1433',
+           database 'banque_compta', tds_version '7.4');
+
+-- Mapping
+CREATE USER MAPPING FOR banque_admin
+  SERVER mssql_server
+  OPTIONS (username 'fdw_user', password 'FdwMssqlT0g0!');
+```
+
+### Tables distantes
+
+Chaque table distante est declaree avec `CREATE FOREIGN TABLE` en miroir de la table source :
+
+```sql
+-- Table MySQL distante
+CREATE FOREIGN TABLE fdw_dossier_credit (
+  id INTEGER,
+  client_icf VARCHAR(64),
+  montant DECIMAL(15,2),
+  duree_mois INTEGER,
+  taux_interet DECIMAL(5,2),
+  statut VARCHAR(20),
+  date_soumission DATE,
+  date_decision DATE
+) SERVER mysql_server
+  OPTIONS (table_name 'dossier_credit');
+
+-- Table SQL Server distante (dates en VARCHAR)
+CREATE FOREIGN TABLE fdw_ecriture_comptable (
+  id INTEGER,
+  compte_debit VARCHAR(20),
+  compte_credit VARCHAR(20),
+  montant DECIMAL(15,2),
+  date_ecriture VARCHAR(30),    -- VARCHAR a cause de tds_fdw
+  libelle TEXT,
+  agence_id INTEGER
+) SERVER mssql_server
+  OPTIONS (table_name 'ecriture_comptable', row_estimate_method 'showplan_all');
+```
+
+### Vues federees (jointures inter-SGBD)
+
+Les vues combinent donnees locales et distantes :
+
+```sql
+-- Vue multi-SGBD : PostgreSQL + MySQL
+CREATE VIEW vue_client_complet AS
+SELECT
+  c.icf,
+  c.nom || ' ' || c.prenom AS nom_complet,
+  a.nom AS agence,
+  COALESCE(s.score, 0) AS score_risque,
+  s.categorie_risque,
+  COALESCE(SUM(cr.montant), 0) AS total_credits,
+  COUNT(DISTINCT cr.id) AS nb_credits
+FROM client c                          -- Table locale (PostgreSQL)
+JOIN agence a ON c.agence_id = a.id    -- Table locale (PostgreSQL)
+LEFT JOIN fdw_scoring s                -- Table distante (MySQL via FDW)
+  ON c.icf = s.client_icf
+LEFT JOIN fdw_dossier_credit cr        -- Table distante (MySQL via FDW)
+  ON c.icf = cr.client_icf
+GROUP BY c.icf, c.nom, c.prenom, a.nom, s.score, s.categorie_risque;
+
+-- Vue tri-SGBD : PostgreSQL + MySQL + SQL Server
+CREATE VIEW vue_tableau_bord AS
+SELECT
+  a.id,
+  a.nom AS agence,
+  COUNT(DISTINCT c.icf) AS nb_clients,
+  COUNT(DISTINCT cp.id) AS nb_comptes,
+  COALESCE(SUM(CASE WHEN cp.type = 'courant' THEN cp.solde ELSE 0 END), 0) AS depots_vue,
+  COALESCE(SUM(fdc.montant), 0) AS encours_credits,
+  COALESCE(SUM(fec.montant), 0) AS total_ecritures
+FROM agence a                          -- PostgreSQL
+LEFT JOIN client c ON c.agence_id = a.id           -- PostgreSQL
+LEFT JOIN compte cp ON cp.client_icf = c.icf       -- PostgreSQL
+LEFT JOIN fdw_dossier_credit fdc                    -- MySQL (FDW)
+  ON fdc.client_icf = c.icf
+LEFT JOIN fdw_ecriture_comptable fec                -- SQL Server (FDW)
+  ON fec.agence_id = a.id
+GROUP BY a.id, a.nom;
+```
+
+### Vues materialisees
+
+Pour les performances, les aggregations lourdes sont materialisees :
+
+```sql
+CREATE MATERIALIZED VIEW mv_tableau_bord AS
+SELECT * FROM vue_tableau_bord;  -- Cache les jointures inter-SGBD
+
+CREATE MATERIALIZED VIEW mv_clients_risque_eleve AS
+SELECT icf, nom_complet, score_risque, categorie
+FROM vue_client_complet
+WHERE categorie_risque IN ('eleve', 'tres_eleve')
+ORDER BY score_risque DESC;
+
+-- Rafraichissement
+REFRESH MATERIALIZED VIEW CONCURRENTLY mv_tableau_bord;
+```
+
+---
+
+## Architecture reseau et conteneurisation
+
+### Topologie Docker
+
+```yaml
+networks:
+  reseau-banque:          # Reseau prive bridge
+    driver: bridge
+
+services:
+  postgres-hub:
+    ports:
+      - "5435:5432"       # Hote:Conteneur
+    networks:
+      - reseau-banque
+    depends_on:
+      mysql-credit:
+        condition: service_healthy
+      mssql-compta:
+        condition: service_healthy
+    # mysql_fdw et tds_fdw compiles dans le Dockerfile
+
+  mysql-credit:
+    ports:
+      - "3308:3306"
+    networks:
+      - reseau-banque
+    # bind-address = 0.0.0.0 pour autoriser les connexions FDW
+
+  mssql-compta:
+    ports:
+      - "1435:1433"
+    networks:
+      - reseau-banque
+    # ACCEPT_EULA requis
+
+  fastapi-backend:
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres-hub:
+        condition: service_healthy
+    # Connexion aux 3 bases via les noms de conteneurs
+```
+
+### Communication inter-conteneurs
+
+```
+NOM CONTENEUR      RESEAU INTERNE       PORT     VISIBLE DE
+postgres-hub       reseau-banque        5432     tous les conteneurs + hote:5435
+mysql-credit       reseau-banque        3306     tous les conteneurs + hote:3308
+mssql-compta       reseau-banque        1433     tous les conteneurs + hote:1435
+fastapi-backend    reseau-banque        8000     tous les conteneurs + hote:8000
+react-frontend     reseau-banque        3000     hote:3000
+```
+
+Les connexions entre conteneurs utilisent les **noms de services Docker** (ex: `postgres-hub`, `mysql-credit`) et les **ports internes** (5432, 3306, 1433), tandis que l'acces depuis l'hote utilise les ports mappes (5435, 3308, 1435).
+
+### Pipeline de demarrage
+
+```
+$ docker compose up -d --build
+
+1. mysql-credit  [healthcheck: mysqladmin ping]     |
+2. mssql-compta  [healthcheck: sqlcmd SELECT 1]     |  ← Parallele
+3. postgres-hub                                       ← Attend 1 et 2
+   ├── init/ (tables locales)
+   └── post-init/ (configure FDW → tables distantes → vues)
+4. fastapi-backend [healthcheck: curl /api/health]    ← Attend 3
+5. react-frontend                                     ← Attend 4
 ```
 
 ---
 
 ## Captures d'ecran
 
-### Dashboard - Tableau de bord
+### Tableau de bord federé (vue agregee des 3 SGBD)
 ![Dashboard](screenshots/01-dashboard.png)
-> Indicateurs cles de performance (KPI) : nombre de clients, comptes, credits actifs, depots totaux, encours de credits. Graphiques d'evolution des transactions et repartition par agence.
+> Requete sur la vue tri-SGBD `vue_tableau_bord` : total clients (PostgreSQL), credits (MySQL via FDW), ecritures comptables (SQL Server via FDW). Graphiques generes par jointures inter-bases.
 
-### Clients
+### Liste des clients (PostgreSQL — table locale)
 ![Clients](screenshots/02-clients.png)
-> Liste des 20 clients avec pagination, recherche par nom/ICF et filtres par agence et type de piece. Chaque ligne affiche l'ICF, le nom, l'agence et le statut.
+> Table `client` du hub PostgreSQL. L'ICF (colonne de 64 caracteres) est l'identifiant transverse SHA-256 genere par fonction PL/pgSQL.
 
-### Comptes
+### Comptes bancaires (PostgreSQL — table locale)
 ![Comptes](screenshots/03-comptes.png)
-> Gestion des 30 comptes bancaires avec apercu du solde, du type (courant, epargne, terme) et du statut. Liens vers le detail et l'historique des transactions.
+> Table `compte` avec ses 3 types (courant, epargne, terme). Jointure possible avec `fdw_dossier_credit` (MySQL) via l'ICF.
 
-### Credits
+### Credits (MySQL — table distante via mysql_fdw)
 ![Credits](screenshots/04-credits.png)
-> Liste des 15 dossiers de credit avec montant, duree, taux, statut (en_attente, approuve, rejete) et score de risque associe.
+> Les 15 dossiers de credit interroges depuis PostgreSQL via `fdw_dossier_credit`. Le wrapper mysql_fdw traduit la requete en protocole MySQL.
 
-### Operations comptables
+### Operations comptables (SQL Server — table distante via tds_fdw)
 ![Operations](screenshots/05-operations.png)
-> Operations bancaires avec ecritures comptables integrees provenant de SQL Server via FDW. Montants, dates, types d'operation et comptes OHADA associes.
+> Les 120 ecritures comptables issues de SQL Server via `fdw_ecriture_comptable`. Les dates arrivent en VARCHAR(30) et sont converties par TO_DATE().
 
-### Employes et paie
+### Employes et paie (SQL Server — table distante via tds_fdw)
 ![Employes](screenshots/06-employes.png)
-> Liste des 10 employes avec poste, agence d'affectation. Acces aux bulletins de paie mensuels (20 bulletins) generes depuis SQL Server.
+> Requete sur `fdw_bulletin_paie` (SQL Server). Donnees RH accessibles depuis le hub sans duplication.
 
-### Alertes
+### Alertes (requetes inter-bases)
 ![Alertes](screenshots/07-alertes.png)
-> Tableau de bord des alertes : soldes bas, echeances de credit en retard, transactions suspectes. Vue synthetique avec compteurs et priorite.
+> Alertes basees sur des requetes croisees : soldes bas (PG), echeances MySQL en retard (via FDW), transactions suspectes.
 
-### Federation - Statut FDW
+### Statut FDW (serveurs etrangers et tables distantes)
 ![Federation](screenshots/08-federation.png)
-> Etat des connexions FDW entre PostgreSQL et les bases distantes (MySQL, SQL Server). Statut de chaque serveur etranger et nombre de tables distantes.
+> Etat des connexions FDW : serveurs `mysql_server` et `mssql_server`, tables distantes importees, nombre de lignes.
 
-### Base de donnees
+### Vue d'ensemble des 3 bases (PostgreSQL + MySQL + SQL Server)
 ![Database](screenshots/09-database.png)
-> Vue d'ensemble des trois bases (PostgreSQL, MySQL via FDW, SQL Server via FDW). Statistiques : nombre de tables, enregistrements, index, vues materialisees.
+> Statistiques d'administration : nombre de tables, enregistrements, index, triggers pour chaque SGBD.
 
-### Reconciliation
+### Reconciliation inter-bases (coherence des donnees)
 ![Reconciliation](screenshots/10-reconciliation.png)
-> Rapport de coherence inter-bases : verification des ICF, correspondance comptes-credits, detection de doublons. Lancement de la reconciliation complete.
+> Verification de l'integrite referencee entre les 3 SGBD : ICF manquants, doublons, credits sans client correspondant.
 
 ---
 
-## Pre-requis
+## Administration des SGBD
 
-- Docker et Docker Compose v2
-- Git
-- 8 Go de RAM minimum
-
-## Installation rapide
+### Connexion aux bases
 
 ```bash
-git clone https://github.com/votre-organisation/projet-fin-dba.git
-cd projet-fin-dba
-docker compose up -d --build
+# PostgreSQL Hub
+docker exec -it postgres-hub psql -U banque_admin -d banque_hub
+
+# MySQL Credits
+docker exec -it mysql-credit mysql -u credit_user -pCr3ditT0g0! banque_credit
+
+# SQL Server Compta
+docker exec -it mssql-compta /opt/mssql-tools18/bin/sqlcmd \
+  -S localhost -U sa -P C0mptaT0g0!2025 -C -d banque_compta
 ```
 
-Les services demarrent dans cet ordre :
-1. MySQL (Credits) et SQL Server (Compta) - bases sources
-2. PostgreSQL (Hub) - avec configuration FDW differee
-3. Backend FastAPI - attend que les 3 bases soient pretes
-4. Frontend React - attend le backend
+### Commandes FDW
 
-## Acces aux services
+```sql
+-- Lister les serveurs etrangers
+SELECT * FROM pg_foreign_server;
 
-| Service | URL interne | Port hote | Description |
-|---------|-------------|-----------|-------------|
-| PostgreSQL Hub | postgres-hub:5432 | 5435 | Hub central avec extensions FDW |
-| MySQL Credits | mysql-credit:3306 | 3308 | Credits, garanties, scoring risque |
-| SQL Server Compta | mssql-compta:1433 | 1435 | Comptabilite OHADA et paie RH |
-| API FastAPI | http://localhost:8000 | 8000 | Backend REST |
-| Documentation API | http://localhost:8000/docs | 8000 | Swagger UI |
-| Interface web | http://localhost:3000 | 3000 | Frontend React |
-| Grafana | http://localhost:3001 | 3001 | Monitoring |
-| Prometheus | http://localhost:9090 | 9090 | Metriques |
+-- Lister les tables distantes
+SELECT * FROM pg_foreign_table;
 
-### Commandes utiles
+-- Afficher les mappings utilisateurs
+SELECT * FROM pg_user_mappings;
+
+-- Tester une requete distante
+EXPLAIN (VERBOSE) SELECT * FROM fdw_dossier_credit WHERE statut = 'approuve';
+```
+
+### Commandes d'administration
 
 ```bash
-# Demarrer / Arreter / Redemarrer
-docker compose up -d --build
-docker compose down
-docker compose down && docker compose up -d --build
+# Rafraichir les vues materialisees
+curl -X POST http://localhost:8000/api/dashboard/refresh
 
-# Logs
-docker compose logs -f backend
-docker compose logs -f postgres-hub
+# Verifier la sante de tous les SGBD
+curl http://localhost:8000/api/health
 
-# Tests backend
+# Statut de la federation FDW
+curl http://localhost:8000/api/federation/status
+
+# Tests
 docker exec fastapi-backend pytest -v
-
-# Verification complete
-./scripts/verify-all.sh
-./scripts/reconcile.sh
 ```
 
 ---
 
-## Structure du projet
+## Schemas des donnees
 
-```
-projet_fin_dba/
-├── docker-compose.yml          # Orchestration des 11 services
-├── .env                        # Credentials et configuration
-├── AGENTS.md                   # Guide de reference
-├── README.md
-├── screenshots/                # Captures d'ecran de l'interface
-│
-├── backend/                    # API FastAPI (Python 3.12)
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   ├── app/
-│   │   ├── main.py            # Point d'entree FastAPI
-│   │   ├── config.py          # Configuration pydantic-settings
-│   │   ├── database.py        # Moteurs async (asyncpg, aiomysql)
-│   │   ├── exceptions.py      # Gestion des erreurs
-│   │   ├── models/            # Modeles SQLAlchemy
-│   │   ├── routers/           # Endpoints REST
-│   │   ├── schemas/           # Modeles Pydantic
-│   │   ├── services/          # Logique metier
-│   │   └── utils/             # Utilitaires (generation ICF)
-│   └── tests/                 # Tests pytest async
-│
-├── frontend/                   # Interface React 18 + Vite 5
-│   ├── Dockerfile
-│   ├── package.json
-│   ├── src/
-│   │   ├── App.jsx            # 16 routes, navigation
-│   │   ├── api/               # Client Axios
-│   │   ├── components/        # Composants reutilisables
-│   │   ├── pages/             # Pages de l'application
-│   │   └── utils/             # Export CSV
-│   └── public/
-│
-├── postgres-hub/               # Base de donnees Hub (PostgreSQL 16)
-│   ├── Dockerfile              # + mysql_fdw + tds_fdw
-│   ├── init/                   # Tables locales, index
-│   ├── fdw-init/               # Serveurs FDW, tables distantes, vues
-│   ├── seed/                   # Donnees de test
-│   └── post-init/              # Configuration FDW differee
-│
-├── mysql-credit/               # Base Credits & Risque (MySQL 8.0)
-│   ├── Dockerfile
-│   ├── my.cnf
-│   └── init/                   # Tables, utilisateur, donnees
-│
-├── mssql-compta/               # Base Comptabilite & RH (SQL Server 2022)
-│   ├── Dockerfile
-│   ├── entrypoint.sh
-│   ├── init/                   # Tables, index, utilisateur
-│   └── seed/                   # Donnees de test
-│
-├── scripts/                    # Scripts d'administration
-│   ├── verify-all.sh           # Verification complete
-│   ├── reconcile.sh            # Reconciliation des donnees
-│   └── wait-for-it.sh          # Attente de service
-│
-├── prometheus/
-│   └── prometheus.yml          # Configuration Prometheus
-│
-└── grafana/
-    ├── provisioning/           # Datasources, dashboards automatiques
-    └── dashboards/             # Tableaux de bord Grafana
-```
+### PostgreSQL — Hub (5 tables, ~169 enregistrements)
 
----
+| Table | Lignes | Dependances |
+|-------|--------|-------------|
+| `agence` | 5 | — |
+| `employe` | 10 | FK → agence |
+| `client` | 20 | FK → agence, ICF (SHA-256) |
+| `compte` | 30 | FK → client (icf) |
+| `transaction` | 104 | FK → compte |
 
-## Schema des donnees
+### MySQL — Credits & Risque (4 tables, ~105 enregistrements)
 
-### PostgreSQL Hub (Tables locales)
+| Table | Lignes | Acces FDW |
+|-------|--------|-----------|
+| `dossier_credit` | 15 | `fdw_dossier_credit` |
+| `garantie` | 20 | `fdw_garantie` |
+| `echeancier` | 50 | `fdw_echeancier` |
+| `scoring` | 20 | `fdw_scoring` |
 
-| Table | Enregistrements | Description |
-|-------|-----------------|-------------|
-| `agence` | 5 | Agences bancaires (Lome, Kpalime, Sokode, Kara, Dapaong) |
-| `employe` | 10 | Employes (2 par agence) |
-| `client` | 20 | Clients avec ICF (SHA-256, 64 caracteres) |
-| `compte` | 30 | Comptes (courant, epargne, terme) |
-| `transaction` | 104 | Transactions bancaires |
+### SQL Server — Comptabilite & RH (4 tables, ~250 enregistrements)
 
-### MySQL - Credits & Risque
-
-| Table | Enregistrements | Description |
-|-------|-----------------|-------------|
-| `dossier_credit` | 15 | Demandes de pret |
-| `garantie` | 20 | Garanties associees |
-| `echeancier` | 50 | Echeanciers de remboursement |
-| `scoring` | 20 | Scores de risque (0-100) |
-
-### SQL Server - Comptabilite & RH
-
-| Table | Enregistrements | Description |
-|-------|-----------------|-------------|
-| `plan_comptable` | 60 | Plan comptable OHADA |
-| `ecriture_comptable` | 120 | Ecritures comptables |
-| `bulletin_paie` | 20 | Bulletins de paie |
-| `operation_agence` | 50 | Operations par agence |
-
-### Tables distantes (FDW)
-
-Les tables distantes sont accessibles depuis PostgreSQL via les Foreign Data Wrappers :
-
-| Table distante | Source | Enregistrements |
-|----------------|--------|-----------------|
-| `fdw_dossier_credit` | MySQL | 15 |
-| `fdw_garantie` | MySQL | 20 |
-| `fdw_echeancier` | MySQL | 50 |
-| `fdw_scoring` | MySQL | 20 |
-| `fdw_ecriture_comptable` | SQL Server | 120 |
-| `fdw_plan_comptable` | SQL Server | 60 |
-| `fdw_bulletin_paie` | SQL Server | 20 |
-| `fdw_operation_agence` | SQL Server | 50 |
-
-### Vues federees
-
-| Vue | Sources | Description |
-|-----|---------|-------------|
-| `vue_client_complet` | PG + MySQL | Profil client unifie avec score risque |
-| `vue_credit_detail` | PG + MySQL | Dossier de credit complet avec garanties |
-| `vue_operation_comptable` | PG + SQL Server | Operations avec ecritures comptables |
-| `vue_tableau_bord` | PG + MySQL + SQL Server | KPIs par agence |
-
-### Vues materialisees
-
-| Vue | Description |
-|-----|-------------|
-| `mv_tableau_bord` | Indicateurs de tableau de bord (caches) |
-| `mv_clients_risque_eleve` | Clients a risque eleve/tres eleve |
-
----
-
-## API REST
-
-Documentation complete : http://localhost:8000/docs
-
-### Sante et Federation
-
-| Methode | Endpoint | Description |
-|---------|----------|-------------|
-| GET | `/api/health` | Etat des 3 bases de donnees |
-| GET | `/api/federation/status` | Statut des connexions FDW |
-
-### Clients
-
-| Methode | Endpoint | Description |
-|---------|----------|-------------|
-| GET | `/api/clients` | Liste (pagination, recherche, filtres) |
-| GET | `/api/clients/{icf}` | Detail par ICF |
-| POST | `/api/clients` | Creation (ICF genere automatiquement) |
-
-### Comptes
-
-| Methode | Endpoint | Description |
-|---------|----------|-------------|
-| GET | `/api/comptes/` | Liste des comptes |
-| GET | `/api/comptes/stats` | Statistiques |
-| GET | `/api/comptes/{id}` | Detail d'un compte |
-| POST | `/api/comptes/` | Creation d'un compte |
-| PUT | `/api/comptes/{id}/statut` | Mise a jour du statut |
-| GET | `/api/comptes/{id}/transactions` | Historique des transactions |
-
-### Credits
-
-| Methode | Endpoint | Description |
-|---------|----------|-------------|
-| GET | `/api/credits` | Liste des dossiers |
-| GET | `/api/credits/{id}` | Detail d'un dossier |
-| GET | `/api/credits/{id}/echeancier` | Echeancier de remboursement |
-| POST | `/api/credits` | Creation d'une demande |
-| PUT | `/api/credits/{id}/decision` | Approbation/rejet |
-| PUT | `/api/credits/{id}/echeancier/{id}/statut` | Statut d'echeance |
-| POST | `/api/credits/{id}/garanties` | Ajout de garantie |
-| POST | `/api/credits/{id}/scoring` | Ajout de score risque |
-
-### Operations
-
-| Methode | Endpoint | Description |
-|---------|----------|-------------|
-| GET | `/api/operations` | Liste des operations comptables |
-| POST | `/api/operations/transactions` | Creation de transaction |
-
-### Tableau de bord
-
-| Methode | Endpoint | Description |
-|---------|----------|-------------|
-| GET | `/api/dashboard` | KPIs globaux |
-| GET | `/api/dashboard/agence/{id}` | KPIs par agence |
-| GET | `/api/dashboard/risque` | Clients a haut risque |
-| POST | `/api/dashboard/refresh` | Rafraichir les vues materialisees |
-
-### Employes et Paie
-
-| Methode | Endpoint | Description |
-|---------|----------|-------------|
-| GET | `/api/employes/` | Liste des employes |
-| GET | `/api/employes/paie/` | Bulletins de paie |
-| GET | `/api/employes/paie/stats` | Statistiques paie |
-
-### Alertes
-
-| Methode | Endpoint | Description |
-|---------|----------|-------------|
-| GET | `/api/alertes/` | Liste des alertes |
-| GET | `/api/alertes/resume` | Resume des alertes |
-| GET | `/api/alertes/solde-bas` | Soldes bas |
-| GET | `/api/alertes/echeances-retard` | Echeances en retard |
-| GET | `/api/alertes/transactions-suspectes` | Transactions suspectes |
-
-### Reconciliation
-
-| Methode | Endpoint | Description |
-|---------|----------|-------------|
-| GET | `/api/reconciliation/rapport` | Rapport de coherence ICF |
-| GET | `/api/reconciliation/comptes-credits` | Coherence comptes/credits |
-| GET | `/api/reconciliation/doublons-icf` | Detection doublons ICF |
-| POST | `/api/reconciliation/refresh` | Reconciliation complete |
-
-### Gestion des bases
-
-| Methode | Endpoint | Description |
-|---------|----------|-------------|
-| GET | `/api/database/postgres` | Infos PostgreSQL |
-| GET | `/api/database/mysql` | Infos MySQL |
-| GET | `/api/database/mssql` | Infos SQL Server (via FDW) |
-| GET | `/api/database/overview` | Vue d'ensemble combinee |
-| POST | `/api/database/refresh-views` | Rafraichir les vues materialisees |
-
----
-
-## Fonctionnalites cles
-
-### Federation de donnees
-- Integration transparente de 3 SGBD heterogenes via `mysql_fdw` et `tds_fdw`
-- Jointures inter-bases dans les vues federees
-- **ICF** (Identifiant Client Federe) genere par SHA-256 pour la coherence inter-bases
-
-### Monitoring
-- **Prometheus** collecte les metriques des 3 bases (exporter PG, MySQL, cadvisor)
-- **Grafana** visualise les tableaux de bord de performance
-- Alertes basees sur les metriques
-
-### Reconciliation
-- Verification de coherence des ICF entre les bases
-- Detection des doublons
-- Rapprochement comptes-credits
+| Table | Lignes | Acces FDW |
+|-------|--------|-----------|
+| `plan_comptable` | 60 | `fdw_plan_comptable` |
+| `ecriture_comptable` | 120 | `fdw_ecriture_comptable` |
+| `bulletin_paie` | 20 | `fdw_bulletin_paie` |
+| `operation_agence` | 50 | `fdw_operation_agence` |
 
 ---
 
 ## Technologies
 
-| Technologie | Version | Utilisation |
-|-------------|---------|-------------|
-| PostgreSQL | 16 | Hub central avec FDW (mysql_fdw, tds_fdw) |
-| MySQL | 8.0 | Credits, garanties, scoring risque |
-| SQL Server | 2022 | Comptabilite OHADA, paie RH |
-| FastAPI | 0.110+ | API REST asynchrone |
-| SQLAlchemy | 2.0+ | ORM asynchrone |
-| Uvicorn | - | Serveur ASGI |
-| React | 18 | Interface utilisateur |
-| Vite | 5 | Bundler frontend |
-| Tailwind CSS | 4 | Framework CSS utilitaire |
-| Recharts | 2.12 | Graphiques et visualisations |
-| lucide-react | 0.330 | Icones |
-| Docker | - | Conteneurisation |
-| Prometheus | - | Collecte de metriques |
-| Grafana | - | Tableaux de bord monitoring |
-
----
-
-## Tests
-
-```bash
-# Tests backend (pytest async)
-docker exec fastapi-backend pytest -v
-
-# Test specifique
-docker exec fastapi-backend pytest tests/test_clients.py -v
-
-# Avec couverture
-docker exec fastapi-backend pytest --cov=app
-
-# Verification complete du systeme
-./scripts/verify-all.sh
-
-# Reconciliation des donnees
-./scripts/reconcile.sh
-```
+| Technologie | Version | Role |
+|-------------|---------|------|
+| PostgreSQL | 16 | SGBD hub avec extensions FDW compilees |
+| MySQL | 8.0 | SGBD source (credits, risque) |
+| SQL Server | 2022 | SGBD source (compta, RH) |
+| mysql_fdw | master | Wrapper FDW MySQL → PostgreSQL |
+| tds_fdw | master | Wrapper FDW SQL Server → PostgreSQL (via FreeTDS) |
+| FastAPI | 0.110+ | API REST d'administration |
+| Prometheus | latest | Monitoring des 3 SGBD |
+| Grafana | latest | Dashboards de performance |
+| Docker | — | Conteneurisation des SGBD |
 
 ---
 
 ## Auteurs
 
-**Universite de Lome** - Ecole Polytechnique de Lome (EPL)
-Departement d'Informatique
+**Universite de Lome** — **Departement de Genie Informatique**
+**Licence 3** — **UE : Administration des Bases de Donnees**
 
-Projet de fin d'annee - Systemes de Bases de Donnees Avancees (SBDA)
-Theme : Optimisation des performances d'une banque commerciale par un systeme de bases de donnees federees
+Projet : Architecture de bases de donnees federees pour l'optimisation des performances d'une banque commerciale au Togo
